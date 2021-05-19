@@ -1,0 +1,8 @@
+.husky/
+.vscode/
+node_modules/
+/.*
+/*.config.js
+/tsconfig.json
+/tsconfig.*.json
+/yarn.lock
