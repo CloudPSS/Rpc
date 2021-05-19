@@ -1,11 +1,13 @@
 {
   "name": "@cloudpss/rpc",
+  "description": "Rpc used in cloudpss, a simple shim of apache thrift",
   "version": "0.0.1",
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
-    "node": ">= 14"
+    "node": ">= 12"
   },
+  "homepage": "https://github.com/CloudPSS/Rpc",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "src/index.d.ts",
