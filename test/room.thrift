@@ -21,3 +21,8 @@ service RoomService {
   void remove(1: string id)
   oneway void update(1: string id)
 }
+/** rtc room service */
+service RoomService2 extends RoomService {
+  /** create a new room */
+  RoomInfo create2()
+}

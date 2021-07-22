@@ -4,7 +4,7 @@ import { RoomInfo } from './thrift/gen-nodejs/room_types';
 
 /** 创建 RPC 服务 */
 export function server(): ThriftServer {
-    return createServer().route('room', RoomService, {
+    const s = createServer().route('room', RoomService, {
         create() {
             return new RoomInfo();
         },
@@ -18,13 +18,14 @@ export function server(): ThriftServer {
             return;
         },
     });
+    return s;
 }
 
 /** 创建 RPC 客户端 */
 export async function client(): Promise<void> {
     const client = createClient({
         host: 'localhost',
-        port: 14000,
+        port: 4000,
     });
     const room = client.get('room', RoomService);
     try {

@@ -6,31 +6,46 @@ import {
     createSSLConnection,
 } from 'thrift';
 
-function wrapHandler(handler) {
+function wrapHandler(handler, processor, server) {
     const wrap = {};
-    for (const key in handler) {
-        const func = handler[key];
-        if (typeof func != 'function') {
-            continue;
+    let currentObj = processor.prototype;
+    do {
+        // 在原型链上查找 process_* 方法
+        for (const processorKey of Object.getOwnPropertyNames(currentObj)) {
+            if (!processorKey.startsWith('process_')) continue;
+
+            const key = processorKey.slice('process_'.length);
+            const wrapper = async function (...args) {
+                if (typeof args[args.length - 1] === 'function') {
+                    const callback = args.pop();
+                    try {
+                        const ret = await this[key](...args);
+                        callback(null, ret);
+                    } catch (ex) {
+                        callback(ex);
+                    }
+                } else {
+                    // one-way methods
+                    try {
+                        await this[key](...args);
+                    } catch (ex) {
+                        server.emit('error', ex);
+                    }
+                }
+            }.bind(handler);
+
+            // 设置长度以强制使用回调版本重载
+            Object.defineProperty(wrapper, 'length', { value: -1 });
+            wrap[key] = wrapper;
         }
-        const wrapper = async function (...args) {
-            const callback = args.pop();
-            try {
-                const ret = await this[key](...args);
-                callback(null, ret);
-            } catch (ex) {
-                callback(ex);
-            }
-        }.bind(handler);
-        Object.defineProperty(wrapper, 'length', { value: -1 });
-        wrap[key] = wrapper;
-    }
+    } while ((currentObj = Object.getPrototypeOf(currentObj)));
     return wrap;
 }
 
 export function createServer(options) {
     const multiplex = new MultiplexedProcessor();
     const server = createMultiplexServer(multiplex, options);
+    Object.defineProperty(server, '_processor', { value: multiplex });
     server.route = function route(name, processor, handler) {
         if (name in multiplex.services) {
             throw new Error(`Service with name "${name}" already exists`);
@@ -38,7 +53,7 @@ export function createServer(options) {
         while (typeof processor.Processor == 'function') {
             processor = processor.Processor;
         }
-        multiplex.registerProcessor(name, new processor(wrapHandler(handler)));
+        this._processor.registerProcessor(name, new processor(wrapHandler(handler, processor, this)));
         return this;
     };
     return server;

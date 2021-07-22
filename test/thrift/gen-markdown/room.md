@@ -1,12 +1,14 @@
 # Thrift module: room
 
-| Module | Services & Functions                          | Data types                   | Constants |
-| ------ | --------------------------------------------- | ---------------------------- | --------- |
-| room   | [RoomService](#service-roomservice)           | [RoomInfo](#struct-roominfo) |           |
-|        | [ &bull; create](#function-roomservicecreate) |                              |           |
-|        | [ &bull; get](#function-roomserviceget)       |                              |           |
-|        | [ &bull; remove](#function-roomserviceremove) |                              |           |
-|        | [ &bull; update](#function-roomserviceupdate) |                              |           |
+| Module | Services & Functions                             | Data types                   | Constants |
+| ------ | ------------------------------------------------ | ---------------------------- | --------- |
+| room   | [RoomService](#service-roomservice)              | [RoomInfo](#struct-roominfo) |           |
+|        | [ &bull; create](#function-roomservicecreate)    |                              |           |
+|        | [ &bull; get](#function-roomserviceget)          |                              |           |
+|        | [ &bull; remove](#function-roomserviceremove)    |                              |           |
+|        | [ &bull; update](#function-roomserviceupdate)    |                              |           |
+|        | [RoomService2](#service-roomservice2)            |                              |           |
+|        | [ &bull; create2](#function-roomservice2create2) |                              |           |
 
 ---
 
@@ -54,3 +56,15 @@ _remove_(`string` id)
 
 `void`
 _update_(`string` id)
+
+### Service: RoomService2
+
+**extends ** _[`RoomService`](#service-roomservice)_
+rtc room service
+
+#### Function: RoomService2.create2
+
+create a new room
+
+[`RoomInfo`](#struct-roominfo)
+_create2_()
