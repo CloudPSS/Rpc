@@ -8,6 +8,10 @@
     "node": ">= 12"
   },
   "homepage": "https://github.com/CloudPSS/Rpc",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:CloudPSS/Rpc.git"
+  },
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "src/index.d.ts",
