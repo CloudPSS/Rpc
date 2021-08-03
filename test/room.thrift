@@ -20,6 +20,7 @@ service RoomService {
   RoomInfo get(1: string id)
   void remove(1: string id)
   oneway void update(1: string id)
+  bool pppbool(1: bool id)
 }
 /** rtc room service */
 service RoomService2 extends RoomService {

@@ -7,6 +7,7 @@
 |        | [ &bull; get](#function-roomserviceget)          |                              |           |
 |        | [ &bull; remove](#function-roomserviceremove)    |                              |           |
 |        | [ &bull; update](#function-roomserviceupdate)    |                              |           |
+|        | [ &bull; pppbool](#function-roomservicepppbool)  |                              |           |
 |        | [RoomService2](#service-roomservice2)            |                              |           |
 |        | [ &bull; create2](#function-roomservice2create2) |                              |           |
 
@@ -56,6 +57,11 @@ _remove_(`string` id)
 
 `void`
 _update_(`string` id)
+
+#### Function: RoomService.pppbool
+
+`bool`
+_pppbool_(`bool` id)
 
 ### Service: RoomService2
 

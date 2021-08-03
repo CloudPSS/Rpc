@@ -344,6 +344,108 @@ const RoomService_update_result = class {
         return;
     }
 };
+const RoomService_pppbool_args = class {
+    constructor(args) {
+        this.id = null;
+        if (args) {
+            if (args.id !== undefined && args.id !== null) {
+                this.id = args.id;
+            }
+        }
+    }
+
+    read(input) {
+        input.readStructBegin();
+        while (true) {
+            const ret = input.readFieldBegin();
+            const ftype = ret.ftype;
+            const fid = ret.fid;
+            if (ftype == Thrift.Type.STOP) {
+                break;
+            }
+            switch (fid) {
+                case 1:
+                    if (ftype == Thrift.Type.BOOL) {
+                        this.id = input.readBool();
+                    } else {
+                        input.skip(ftype);
+                    }
+                    break;
+                case 0:
+                    input.skip(ftype);
+                    break;
+                default:
+                    input.skip(ftype);
+            }
+            input.readFieldEnd();
+        }
+        input.readStructEnd();
+        return;
+    }
+
+    write(output) {
+        output.writeStructBegin('RoomService_pppbool_args');
+        if (this.id !== null && this.id !== undefined) {
+            output.writeFieldBegin('id', Thrift.Type.BOOL, 1);
+            output.writeBool(this.id);
+            output.writeFieldEnd();
+        }
+        output.writeFieldStop();
+        output.writeStructEnd();
+        return;
+    }
+};
+const RoomService_pppbool_result = class {
+    constructor(args) {
+        this.success = null;
+        if (args) {
+            if (args.success !== undefined && args.success !== null) {
+                this.success = args.success;
+            }
+        }
+    }
+
+    read(input) {
+        input.readStructBegin();
+        while (true) {
+            const ret = input.readFieldBegin();
+            const ftype = ret.ftype;
+            const fid = ret.fid;
+            if (ftype == Thrift.Type.STOP) {
+                break;
+            }
+            switch (fid) {
+                case 0:
+                    if (ftype == Thrift.Type.BOOL) {
+                        this.success = input.readBool();
+                    } else {
+                        input.skip(ftype);
+                    }
+                    break;
+                case 0:
+                    input.skip(ftype);
+                    break;
+                default:
+                    input.skip(ftype);
+            }
+            input.readFieldEnd();
+        }
+        input.readStructEnd();
+        return;
+    }
+
+    write(output) {
+        output.writeStructBegin('RoomService_pppbool_result');
+        if (this.success !== null && this.success !== undefined) {
+            output.writeFieldBegin('success', Thrift.Type.BOOL, 0);
+            output.writeBool(this.success);
+            output.writeFieldEnd();
+        }
+        output.writeFieldStop();
+        output.writeStructEnd();
+        return;
+    }
+};
 const RoomServiceClient = (exports.Client = class RoomServiceClient {
     constructor(output, pClass) {
         this.output = output;
@@ -535,6 +637,56 @@ const RoomServiceClient = (exports.Client = class RoomServiceClient {
             throw e;
         }
     }
+
+    pppbool(id) {
+        this._seqid = this.new_seqid();
+        const self = this;
+        return new Promise((resolve, reject) => {
+            self._reqs[self.seqid()] = (error, result) => {
+                return error ? reject(error) : resolve(result);
+            };
+            self.send_pppbool(id);
+        });
+    }
+
+    send_pppbool(id) {
+        const output = new this.pClass(this.output);
+        const params = {
+            id: id,
+        };
+        const args = new RoomService_pppbool_args(params);
+        try {
+            output.writeMessageBegin('pppbool', Thrift.MessageType.CALL, this.seqid());
+            args.write(output);
+            output.writeMessageEnd();
+            return this.output.flush();
+        } catch (e) {
+            delete this._reqs[this.seqid()];
+            if (typeof output.reset === 'function') {
+                output.reset();
+            }
+            throw e;
+        }
+    }
+
+    recv_pppbool(input, mtype, rseqid) {
+        const callback = this._reqs[rseqid] || function () {};
+        delete this._reqs[rseqid];
+        if (mtype == Thrift.MessageType.EXCEPTION) {
+            const x = new Thrift.TApplicationException();
+            x.read(input);
+            input.readMessageEnd();
+            return callback(x);
+        }
+        const result = new RoomService_pppbool_result();
+        result.read(input);
+        input.readMessageEnd();
+
+        if (null !== result.success) {
+            return callback(null, result.success);
+        }
+        return callback('pppbool failed: unknown result');
+    }
 });
 const RoomServiceProcessor = (exports.Processor = class RoomServiceProcessor {
     constructor(handler) {
@@ -688,5 +840,47 @@ const RoomServiceProcessor = (exports.Processor = class RoomServiceProcessor {
         args.read(input);
         input.readMessageEnd();
         this._handler.update(args.id);
+    }
+    process_pppbool(seqid, input, output) {
+        const args = new RoomService_pppbool_args();
+        args.read(input);
+        input.readMessageEnd();
+        if (this._handler.pppbool.length === 1) {
+            Promise.resolve(this._handler.pppbool.bind(this._handler)(args.id))
+                .then((result) => {
+                    const result_obj = new RoomService_pppbool_result({ success: result });
+                    output.writeMessageBegin('pppbool', Thrift.MessageType.REPLY, seqid);
+                    result_obj.write(output);
+                    output.writeMessageEnd();
+                    output.flush();
+                })
+                .catch((err) => {
+                    let result;
+                    result = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, err.message);
+                    output.writeMessageBegin('pppbool', Thrift.MessageType.EXCEPTION, seqid);
+                    result.write(output);
+                    output.writeMessageEnd();
+                    output.flush();
+                });
+        } else {
+            this._handler.pppbool(args.id, (err, result) => {
+                let result_obj;
+                if (err === null || typeof err === 'undefined') {
+                    result_obj = new RoomService_pppbool_result(
+                        err !== null || typeof err === 'undefined' ? err : { success: result },
+                    );
+                    output.writeMessageBegin('pppbool', Thrift.MessageType.REPLY, seqid);
+                } else {
+                    result_obj = new Thrift.TApplicationException(
+                        Thrift.TApplicationExceptionType.UNKNOWN,
+                        err.message,
+                    );
+                    output.writeMessageBegin('pppbool', Thrift.MessageType.EXCEPTION, seqid);
+                }
+                result_obj.write(output);
+                output.writeMessageEnd();
+                output.flush();
+            });
+        }
     }
 });

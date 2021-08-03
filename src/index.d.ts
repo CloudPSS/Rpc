@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Server } from 'net';
-import { Server as TlsServer, TlsOptions, ConnectionOptions as TlsConnectionOptions } from 'tls';
-import {
+import type { Server } from 'net';
+import type { Server as TlsServer, TlsOptions, ConnectionOptions as TlsConnectionOptions } from 'tls';
+import type {
     TClientConstructor,
     TProcessorConstructor,
     TTransportConstructor,
@@ -9,6 +9,7 @@ import {
     ConnectOptions,
     Connection,
 } from 'thrift';
+import type { Promisable } from 'type-fest';
 
 /** Thrift 生成的服务模块，使用 `import * as XxxService from './thrift/XxxService'` */
 export interface ServiceModule<TClient> {
@@ -19,18 +20,10 @@ export interface ServiceModule<TClient> {
 }
 
 /** 帮助类型 */
-type HandlerReturnType1<TRet> = TRet extends void ? never : TRet | PromiseLike<TRet>;
-
-/** 帮助类型 */
-type HandlerReturnType<TRet> = HandlerReturnType1<TRet> extends never
-    ? void | PromiseLike<void>
-    : HandlerReturnType1<TRet>;
-
-/** 帮助类型 */
 type HandlerFunction<T> = T extends (
     ...args: [...args: infer TArgs, callback?: (error: any, response: infer TRet) => void]
-) => infer TRet
-    ? (...args: TArgs) => HandlerReturnType<TRet>
+) => Promise<infer TRet>
+    ? (...args: TArgs) => Promisable<TRet>
     : never;
 
 /** 服务的实现类型 */
@@ -39,19 +32,13 @@ export type Handler<TClient> = {
 };
 
 /** 帮助类型 */
-type ClientReturnType1<TRet> = TRet extends void ? never : Promise<TRet>;
-
-/** 帮助类型 */
-type ClientReturnType<TRet> = ClientReturnType1<TRet> extends never ? Promise<void> : ClientReturnType1<TRet>;
-
-/** 帮助类型 */
 type ClientFunction<T> = T extends (
-    ...args: [...args: infer TArgs, callback?: (error: any, response: infer TRet) => void]
-) => infer TRet
-    ? (...args: TArgs) => ClientReturnType<TRet>
+    ...args: [...args: infer TArgs, callback: (error: any, response: infer TRet) => void]
+) => Promise<infer TRet>
+    ? (...args: TArgs) => Promise<TRet>
     : never;
 
-/** 服务的实现类型 */
+/** 服务的调用方接口类型 */
 export type Client<TClient> = {
     [P in keyof TClient]: ClientFunction<TClient[P]>;
 };

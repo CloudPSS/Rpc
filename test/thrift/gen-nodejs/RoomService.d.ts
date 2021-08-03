@@ -49,6 +49,10 @@ declare class Client {
     update(id: string): Promise<void>;
 
     update(id: string, callback?: (error: void, response: void) => void): void;
+
+    pppbool(id: boolean): Promise<boolean>;
+
+    pppbool(id: boolean, callback?: (error: void, response: boolean) => void): void;
 }
 
 declare class Processor {
@@ -60,4 +64,5 @@ declare class Processor {
     process_get(seqid: number, input: thrift.TProtocol, output: thrift.TProtocol): void;
     process_remove(seqid: number, input: thrift.TProtocol, output: thrift.TProtocol): void;
     process_update(seqid: number, input: thrift.TProtocol, output: thrift.TProtocol): void;
+    process_pppbool(seqid: number, input: thrift.TProtocol, output: thrift.TProtocol): void;
 }
