@@ -1,7 +1,7 @@
 {
   "name": "@cloudpss/rpc",
   "description": "Rpc used in cloudpss, a simple shim of apache thrift",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
@@ -20,6 +20,7 @@
     "build:esm": "tsc --outDir dist/esm",
     "build:cjs": "tsc --outDir dist/cjs --module commonjs --target ES5",
     "clean": "rimraf dist",
+    "prepublishOnly": "yarn build",
     "prepare": "husky install",
     "format": "prettier --write .",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx,.vue .",
