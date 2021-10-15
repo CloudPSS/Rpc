@@ -1,10 +1,18 @@
 .husky/
 .vscode/
+
+# *nix binary
+/bin/thrift-bin
+# *nix extracted
+/bin/thrift-*/
+
 node_modules/
+
 /.*
 /*.config.js
 /tsconfig.json
 /tsconfig.*.json
+
 /yarn.lock
 /*.ps1
 *.log

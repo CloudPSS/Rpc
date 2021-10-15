@@ -29,7 +29,7 @@
     "prepare": "husky install",
     "format": "prettier --ignore-path .gitignore --write .",
     "lint": "eslint --ext .js,.ts .",
-    "test": "mkdirp ./test/thrift && ./bin/thrift -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift"
+    "test": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && yarn format"
   },
   "devDependencies": {
     "@commitlint/cli": "^13.2.1",

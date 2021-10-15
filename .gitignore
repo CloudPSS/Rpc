@@ -1,6 +1,11 @@
 # compiled output
 /dist/
 
+# *nix binary
+/bin/thrift-bin
+# *nix extracted
+/bin/thrift-*/
+
 # packages
 /node_modules/
 /.pnp.js
