@@ -1,4 +1,4 @@
-import * as RoomService from './thrift/gen-nodejs/RoomService';
+import RoomService from './thrift/gen-nodejs/RoomService';
 import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
 import { createServer, ThriftServer } from '../src';
 import { RoomInfo } from './thrift/gen-nodejs/room_types';
@@ -27,6 +27,7 @@ export function server(): ThriftServer {
     });
     s.route('room2', RoomService2, {
         b(s) {
+            console.log(s);
             return s;
         },
         create() {

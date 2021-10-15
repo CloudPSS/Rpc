@@ -1,4 +1,4 @@
-import * as RoomService from './thrift/gen-nodejs/RoomService';
+import RoomService from './thrift/gen-nodejs/RoomService';
 import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
 import { createClient } from '../src';
 
@@ -24,7 +24,7 @@ export async function client(): Promise<void> {
         for (let index = 0; index < buffer.length; index++) {
             buffer[index] = index;
         }
-        console.log(await room2.b(buffer));
+        console.log(await room2.b(buffer as unknown as string));
     } catch (ex) {
         console.error('error', ex);
     } finally {

@@ -91,7 +91,13 @@ export interface ThriftClient extends Connection {
     /** 添加或获取一个服务 */
     get<TClient>(service: ServiceModule<TClient>): Client<TClient>;
     /** 添加或获取一个服务 */
-    get<TClient>(name: string, service?: ServiceModule<TClient>): Client<TClient>;
+    get<TClient>(name: string, service: ServiceModule<TClient>): Client<TClient>;
+    /**
+     * 获取一个服务
+     *
+     * @throws 没有找到该服务
+     */
+    get<TClient>(name: string): Client<TClient>;
     /** 查看服务是否存在 */
     has(name: string): boolean;
 }
