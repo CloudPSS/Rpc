@@ -16,7 +16,7 @@
   "module": "dist/esm/index.js",
   "types": "src/index.d.ts",
   "bin": {
-    "thrift": "bin/thrift-0.15.0.exe"
+    "thrift": "bin/thrift.exe"
   },
   "scripts": {
     "start": "yarn clean && tsc --watch",
@@ -28,7 +28,7 @@
     "prepare": "husky install",
     "format": "prettier --ignore-path .gitignore --write .",
     "lint": "eslint --ext .js,.ts .",
-    "test": "mkdirp ./test/thrift && ./bin/thrift-0.15.0.exe -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift"
+    "test": "mkdirp ./test/thrift && ./bin/thrift.exe -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift"
   },
   "devDependencies": {
     "@commitlint/cli": "^13.2.1",
