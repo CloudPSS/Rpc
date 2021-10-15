@@ -25,5 +25,5 @@ service RoomService {
 /** rtc room service */
 service RoomService2 extends RoomService {
   /** create a new room */
-  RoomInfo create2()
+  binary b(binary b)
 }

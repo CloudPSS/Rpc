@@ -57,13 +57,18 @@ export interface ServerOptions extends ThriftOptions {
 }
 
 /** 表示 Thrift RPC 服务端 */
-export interface ThriftServer extends Server {
+interface ThriftServerBase {
     /** 添加一个服务 */
     route<TClient>(name: string, service: ServiceModule<TClient>, handler: Handler<TClient>): this;
+    /** 添加一个服务 */
+    route<TClient>(service: ServiceModule<TClient>, handler: Handler<TClient>): this;
 }
 
 /** 表示 Thrift RPC 服务端 */
-export interface ThriftTlsServer extends TlsServer, ThriftServer {}
+export interface ThriftServer extends Server, ThriftServerBase {}
+
+/** 表示 Thrift RPC 服务端 */
+export interface ThriftTlsServer extends TlsServer, ThriftServerBase {}
 
 /** 创建服务端 */
 export function createServer(options?: ServerOptions & { tls?: undefined }): ThriftServer;
@@ -83,6 +88,8 @@ export interface ClientOptions
 
 /** 表示 Thrift RPC 客户端 */
 export interface ThriftClient extends Connection {
+    /** 添加或获取一个服务 */
+    get<TClient>(service: ServiceModule<TClient>): Client<TClient>;
     /** 添加或获取一个服务 */
     get<TClient>(name: string, service?: ServiceModule<TClient>): Client<TClient>;
     /** 查看服务是否存在 */

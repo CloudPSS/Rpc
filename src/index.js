@@ -6,7 +6,34 @@ import {
     createSSLConnection,
 } from 'thrift';
 
+/**
+ * 获取服务名称
+ * @param { import('.').ServiceModule<any> } module
+ * @returns {string}
+ */
+function getServiceName(module) {
+    let client = module;
+    /** @type {Function} */
+    let constructor;
+    while (typeof client.Client != 'function') {
+        client = client.Client;
+        constructor = client;
+    }
+    const name = String(constructor.name);
+    if (!name.endsWith('Client')) {
+        throw new Error(`"${module}" is not a valid ServiceModule`);
+    }
+    return name.slice(0, name.length - 'Client'.length);
+}
+/**
+ * 生成用户 Handler 的包装器
+ * @param { import('.').Handler<any> } handler
+ * @param { import('.').ServiceModule<any> } processor
+ * @param { import('.').ThriftServerBase } server
+ * @returns { import('.').Handler<any> }
+ */
 function wrapHandler(handler, processor, server) {
+    /** @type { import('.').Handler<any> } */
     const wrap = {};
     let currentObj = processor.prototype;
     do {
@@ -44,9 +71,23 @@ function wrapHandler(handler, processor, server) {
 
 export function createServer(options) {
     const multiplex = new MultiplexedProcessor();
+    /** @type {import('.').ThriftServerBase} */
     const server = createMultiplexServer(multiplex, options);
     Object.defineProperty(server, '_processor', { value: multiplex });
     server.route = function route(name, processor, handler) {
+        if (!name) {
+            throw new TypeError(`Invalid empty name`);
+        }
+        if (typeof name == 'string') {
+            // OK
+        } else if (typeof name == 'object') {
+            // 第二种签名
+            handler = processor;
+            processor = name;
+            name = getServiceName(processor);
+        } else {
+            throw new TypeError(`Invalid name ${name}, string expected`);
+        }
         if (name in multiplex.services) {
             throw new Error(`Service with name "${name}" already exists`);
         }
@@ -66,10 +107,23 @@ export function createClient(options) {
     if (Number.isNaN(port) || port <= 0 || port > 65535) {
         port = 4000;
     }
+    /** @type {import('.').ThriftClient} */
     const connection = tls ? createSSLConnection(host, port, { ...opt, ...tls }) : createConnection(host, port, opt);
     const multiplexer = new Multiplexer();
     const clients = new Map();
     connection.get = function (name, client) {
+        if (!name) {
+            throw new TypeError(`Invalid empty name`);
+        }
+        if (typeof name == 'string') {
+            // OK
+        } else if (typeof name == 'object') {
+            // 第二种签名
+            client = name;
+            name = getServiceName(client);
+        } else {
+            throw new TypeError(`Invalid name ${name}, string expected`);
+        }
         let service = clients.get(name);
         if (service) {
             return service;
