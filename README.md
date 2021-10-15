@@ -22,11 +22,14 @@ yarn add @cloudpss/rpc
 
 ```ts
 import * as MyService from './thrift/MyService';
-import { createServer } from '../src';
+import { createServer } from '@cloudpss/rpc';
 
 const service = createServer();
 service.route('my-service', MyService, {
   // implementation
+  add(a, b) {
+    return a + b;
+  },
 });
 service.listen(Number(process.env.PORT || 4000));
 ```
@@ -35,7 +38,7 @@ service.listen(Number(process.env.PORT || 4000));
 
 ```ts
 import * as MyService from './thrift/MyService';
-import { createClient } from '../src';
+import { createClient } from '@cloudpss/rpc';
 
 const client = createClient({
   host: 'localhost',
@@ -45,6 +48,9 @@ const service = client.get('my-service', MyService);
 // ...
 // use service here
 // ...
+const result = await service.add(1, 2);
+
+client.destroy();
 ```
 
 ## 开发
