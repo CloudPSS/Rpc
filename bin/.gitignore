@@ -1,4 +1,4 @@
 # *nix binary
-/thrift
+/thrift-bin
 # *nix extracted
 /thrift-*/

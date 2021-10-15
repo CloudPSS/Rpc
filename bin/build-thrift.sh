@@ -39,6 +39,6 @@ cd ./thrift-*/compiler/cpp
 mkdir -p cmake-build && cd cmake-build
 cmake ..
 make
-cp bin/thrift $dir
+cp bin/thrift $dir/thrift-bin
 
 cd $pwd
