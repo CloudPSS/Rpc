@@ -1,0 +1,4 @@
+# *nix binary
+/thrift
+# *nix extracted
+/thrift-*/
