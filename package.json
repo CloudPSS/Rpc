@@ -1,7 +1,7 @@
 {
   "name": "@cloudpss/rpc",
   "description": "Rpc used in cloudpss, a simple shim of apache thrift",
-  "version": "0.1.0-dev.5",
+  "version": "0.1.0-dev.6",
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
@@ -16,7 +16,7 @@
   "module": "dist/esm/index.js",
   "types": "src/index.d.ts",
   "bin": {
-    "thrift": "node bin/thrift.js"
+    "thrift": "./bin/thrift.js"
   },
   "scripts": {
     "start": "yarn clean && tsc --watch",
