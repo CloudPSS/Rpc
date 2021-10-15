@@ -7,3 +7,4 @@ node_modules/
 /tsconfig.*.json
 /yarn.lock
 /*.ps1
+*.log
