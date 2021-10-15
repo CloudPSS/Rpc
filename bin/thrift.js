@@ -6,7 +6,8 @@ const path = require('path');
 const executable =
     process.platform !== 'win32' ? path.resolve(__dirname, 'thrift') : path.resolve(__dirname, 'thrift.exe');
 
-spawn(executable, process.argv, {
+const args = process.argv.slice(2);
+spawn(executable, args, {
     stdio: 'inherit',
 }).on('close', (code) => {
     process.exit(code);
