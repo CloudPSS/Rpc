@@ -9,7 +9,6 @@ import type {
     ConnectOptions,
     Connection,
 } from 'thrift';
-import type { Promisable } from 'type-fest';
 
 /** Thrift 生成的服务模块，使用 `import * as XxxService from './thrift/XxxService'` */
 export interface ServiceModule<TClient> {
@@ -23,7 +22,7 @@ export interface ServiceModule<TClient> {
 type HandlerFunction<T> = T extends (
     ...args: [...args: infer TArgs, callback?: (error: any, response: infer TRet) => void]
 ) => Promise<infer TRet>
-    ? (...args: TArgs) => Promisable<TRet>
+    ? (...args: TArgs) => TRet | Promise<TRet> | PromiseLike<TRet>
     : never;
 
 /** 服务的实现类型 */
