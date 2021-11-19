@@ -2,6 +2,8 @@
 /dist/
 /packages/*/dist/
 
+/test/
+
 # packages
 node_modules/
 .pnp.js
