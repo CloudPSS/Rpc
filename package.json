@@ -5,7 +5,7 @@
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
-    "node": ">= 12"
+    "node": ">= 14"
   },
   "homepage": "https://github.com/CloudPSS/Rpc",
   "repository": {
@@ -14,7 +14,7 @@
   },
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
-  "types": "src/index.d.ts",
+  "types": "dist/esm/index.d.ts",
   "bin": {
     "thrift": "./bin/thrift.js"
   },
@@ -29,18 +29,20 @@
     "postinstall": "node ./bin/build-thrift.js",
     "clean": "rimraf dist",
     "prepublishOnly": "yarn build",
-    "test": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && yarn format"
+    "test:build": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && yarn format",
+    "test:server": "ts-node ./test/server.ts",
+    "test:client": "ts-node ./test/client.ts"
   },
   "prettier": "@cloudpss/prettier-config",
   "commitlint": {
     "extends": "@cloudpss"
   },
   "devDependencies": {
-    "@cloudpss/commitlint-config": "^1.0.0",
-    "@cloudpss/eslint-config": "^1.0.0",
-    "@cloudpss/lint-staged-config": "^1.0.0",
-    "@cloudpss/prettier-config": "^1.0.0",
-    "@cloudpss/tsconfig": "^1.0.0",
+    "@cloudpss/commitlint-config": "^1.1.1",
+    "@cloudpss/eslint-config": "^1.1.1",
+    "@cloudpss/lint-staged-config": "^1.1.1",
+    "@cloudpss/prettier-config": "^1.1.1",
+    "@cloudpss/tsconfig": "^1.1.1",
     "husky": "^7.0.4",
     "mkdirp": "^1.0.4",
     "rimraf": "^3.0.2",
@@ -48,7 +50,7 @@
     "typescript": "^4.5.2"
   },
   "dependencies": {
-    "@types/node": "^16.11.8",
+    "@types/node": "^16.11.11",
     "@types/node-int64": "^0.4.29",
     "@types/thrift": "^0.10.10",
     "node-int64": "^0.4.0",

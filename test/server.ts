@@ -1,6 +1,7 @@
 import RoomService from './thrift/gen-nodejs/RoomService';
 import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
-import { createServer, ThriftServer } from '../src';
+import { createServer } from '../dist/cjs/index';
+import type { ThriftServer } from '../src';
 import { RoomInfo } from './thrift/gen-nodejs/room_types';
 
 function pppbool(input: boolean): Promise<boolean> {

@@ -1,6 +1,6 @@
 import RoomService from './thrift/gen-nodejs/RoomService';
 import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
-import { createClient } from '../src';
+import { createClient } from '../dist/cjs/index.js';
 
 /** 创建 RPC 客户端 */
 export async function client(): Promise<void> {
