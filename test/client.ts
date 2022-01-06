@@ -13,23 +13,27 @@ export async function client(): Promise<void> {
     try {
         const room = client.get(RoomService);
         console.log(room);
-        const r = await room.create();
-        console.log(r);
-        await room.get(r.id);
-        await room.update(r.id);
-        await room.remove(r.id);
-
-        const room2 = client.get('room2', RoomService2);
-        const buffer = Buffer.alloc(256);
-        for (let index = 0; index < buffer.length; index++) {
-            buffer[index] = index;
+        for (let index = 0; index < 100; index++) {
+            console.log('create', index);
+            room.create().finally(() => console.log('create_end', index));
         }
-        console.log(await room2.b(buffer as unknown as string));
+        // const r = await room.create();
+        // console.log(r);
+        // await room.get(r.id);
+        // await room.update(r.id);
+        // await room.remove(r.id);
+
+        // const room2 = client.get('room2', RoomService2);
+        // const buffer = Buffer.alloc(256);
+        // for (let index = 0; index < buffer.length; index++) {
+        //     buffer[index] = index;
+        // }
+        // console.log(await room2.b(buffer as unknown as string));
     } catch (ex) {
         console.error('error', ex);
     } finally {
-        console.log('destroy');
-        client.destroy();
+        // console.log('destroy');
+        // client.destroy();
     }
 }
 

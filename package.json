@@ -26,7 +26,6 @@
     "build": "yarn clean && yarn build:esm && yarn build:cjs",
     "build:esm": "tsc --outDir dist/esm --module ESNext",
     "build:cjs": "tsc",
-    "postinstall": "node ./bin/build-thrift.js",
     "clean": "rimraf dist",
     "prepublishOnly": "yarn build",
     "test:build": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && yarn format",
