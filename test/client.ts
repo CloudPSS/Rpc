@@ -23,17 +23,19 @@ export async function client(): Promise<void> {
         // await room.update(r.id);
         // await room.remove(r.id);
 
-        // const room2 = client.get('room2', RoomService2);
-        // const buffer = Buffer.alloc(256);
-        // for (let index = 0; index < buffer.length; index++) {
-        //     buffer[index] = index;
-        // }
-        // console.log(await room2.b(buffer as unknown as string));
+        const room2 = client.get('room2', RoomService2);
+        const buffer = Buffer.allocUnsafe(100_000_000);
+        for (let index = 0; index < buffer.length; index++) {
+            buffer[index] = index;
+        }
+        console.time();
+        console.log(await room2.b(buffer as unknown as string));
+        console.timeEnd();
     } catch (ex) {
         console.error('error', ex);
     } finally {
-        // console.log('destroy');
-        // client.destroy();
+        console.log('destroy');
+        client.destroy();
     }
 }
 

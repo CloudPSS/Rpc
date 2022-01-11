@@ -1,3 +1,5 @@
+import './patch.js';
+
 export type { ServiceModule, Handler, Client } from './interfaces.js';
 
 export type { ClientOptions, ThriftClient } from './client.js';
