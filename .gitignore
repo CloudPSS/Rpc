@@ -1,10 +1,6 @@
 # compiled output
 /dist/
 /packages/*/dist/
-# *nix binary
-/bin/thrift-bin
-# *nix extracted
-/bin/thrift-*/
 
 # generated files
 *.g.*

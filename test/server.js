@@ -1,17 +1,20 @@
-import RoomService from './thrift/gen-nodejs/RoomService';
-import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
-import { createServer } from '../dist/cjs/index';
-import type { ThriftServer } from '../src';
-import { RoomInfo } from './thrift/gen-nodejs/room_types';
+import RoomService from './thrift/gen-nodejs/RoomService.js';
+import * as RoomService2 from './thrift/gen-nodejs/RoomService2.js';
+import { createServer } from '../dist/index.js';
+import { RoomInfo } from './thrift/gen-nodejs/room_types.js';
 import { setTimeout } from 'timers/promises';
+import { TJSONProtocol } from 'thrift';
+import { createServer as net } from 'net';
 
-function pppbool(input: boolean): Promise<boolean> {
+function pppbool(input) {
     return Promise.resolve(input);
 }
 
 /** 创建 RPC 服务 */
-export function server(): ThriftServer {
-    const s = createServer();
+export function server() {
+    const s = createServer({
+        protocol: TJSONProtocol,
+    });
     let i = 0;
     s.route(RoomService, {
         async create() {
@@ -55,4 +58,7 @@ export function server(): ThriftServer {
     return s;
 }
 
-server().listen(4000);
+//server().listen(4000);
+net((c) => {
+    c.on('data', (d) => console.log(JSON.stringify(d.toString())));
+}).listen(4000);

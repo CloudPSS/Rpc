@@ -1,0 +1,146 @@
+import type { LocationRange } from 'peggy';
+import { inspect, InspectOptionsStylized } from 'node:util';
+import { inspectDoc } from './utils.js';
+import { Token, type FieldType, type Identifier } from './token.js';
+
+export class ConstValue extends Token {
+    constructor(location: LocationRange, readonly value: unknown) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        return inspect(this.value, options);
+    }
+}
+
+export class Field extends Token {
+    constructor(
+        location: LocationRange,
+        readonly id: number | undefined,
+        readonly required: boolean | null,
+        readonly type: FieldType,
+        readonly name: Identifier,
+        readonly def: FieldType,
+        readonly doc?: string,
+    ) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        const r = options.stylize(this.required === null ? '' : this.required ? ' required' : ' optional', 'symbol');
+        const d = this.def != null ? ` = ${inspect(this.def, options)}` : '';
+        return `${options.stylize(String(this.id ?? '?'), 'number')}:${r} ${inspect(this.type, options)} ${inspect(
+            this.name,
+            options,
+        )}${d}${inspectDoc(this, options)}`;
+    }
+}
+
+export class Const extends Token {
+    constructor(
+        location: LocationRange,
+        readonly type: FieldType,
+        readonly name: Identifier,
+        readonly value: ConstValue,
+        readonly doc?: string,
+    ) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        return `Const(${inspect(this.type, options)} ${inspect(this.name, options)}) = ${inspect(
+            this.value,
+            options,
+        )}${inspectDoc(this, options)}`;
+    }
+}
+export class EnumValue extends Token {
+    constructor(location: LocationRange, readonly name: Identifier, readonly value: number | null) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        if (this.value == null) return inspect(this.name, options);
+        return `${inspect(this.name, options)} = ${inspect(this.value, options)}`;
+    }
+}
+export class Enum extends Token {
+    constructor(location: LocationRange, readonly name: Identifier, readonly values: Field[]) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        return `Enum(${inspect(this.name, options)}) ${inspect(this.values, options)}`;
+    }
+}
+
+export class StructLike extends Token {
+    constructor(location: LocationRange, readonly name: Identifier, readonly fields: Field[], readonly doc?: string) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        return `${this.constructor.name}(${inspect(this.name, options)})${inspectDoc(this, options)} ${inspect(
+            this.fields,
+            options,
+        )}`;
+    }
+}
+
+export class Struct extends StructLike {}
+export class Exception extends StructLike {}
+export class Union extends StructLike {}
+
+export class Service extends Token {
+    constructor(
+        location: LocationRange,
+        readonly name: Identifier,
+        readonly base: Identifier | null,
+        readonly methods: Method[],
+        readonly doc?: string,
+    ) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        const base = this.base != null ? ` extends ${inspect(this.base, options)}` : '';
+        return `Service(${inspect(this.name, options)}${base})${inspectDoc(this, options)} ${inspect(
+            this.methods,
+            options,
+        )}`;
+    }
+}
+
+export class Method extends Token {
+    constructor(
+        location: LocationRange,
+        readonly result: Field,
+        readonly name: Identifier,
+        readonly params: Field[],
+        readonly throws: Field[] | null,
+        readonly oneway: boolean,
+        readonly doc?: string,
+    ) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        const r = `${options.stylize(this.oneway ? 'oneway ' : '', 'special')}${inspect(this.result, options)}`;
+        const params = this.params.length > 0 ? this.params.map((p) => inspect(p, options)).join(', ') : '';
+        const t = this.throws != null ? ` throws (${this.throws.map((t) => inspect(t, options)).join(', ')})` : '';
+        return `${r} ${inspect(this.name, options)}(${params})${t}${inspectDoc(this, options)}`;
+    }
+}
+
+export class Typedef extends Token {
+    constructor(location: LocationRange, readonly name: Identifier, readonly type: FieldType) {
+        super(location);
+    }
+    /** @inheritdoc */
+    override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
+        return `Typedef(${inspect(this.name, options)}) = ${inspect(this.type, options)}`;
+    }
+}
+
+/** Definition directives */
+export type Definition = Const | Typedef | Enum | Struct | Union | Exception | Service;

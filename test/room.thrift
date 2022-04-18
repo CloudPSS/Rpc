@@ -7,7 +7,7 @@ struct RoomInfo {
   /** expire time in epoch seconds */
   2: double expires
   /** COTURN username */
-  3: string username
+  3: required string username
   /** COTURN password */
   4: optional string password
 }
@@ -18,7 +18,7 @@ service RoomService {
   RoomInfo create()
   /** find existing room */
   RoomInfo get(1: string id)
-  void remove(1: string id)
+  void remove(1: string id) throws (1: RoomNotFoundException e) 
   oneway void update(1: string id)
   bool pppbool(1: bool id)
 }

@@ -23,7 +23,7 @@ rtc room info
 | --- | -------- | -------- | ---------------------------- | ------------ | ------------- |
 | 1   | id       | `string` | id of room                   | default      |               |
 | 2   | expires  | `double` | expire time in epoch seconds | default      |               |
-| 3   | username | `string` | COTURN username              | default      |               |
+| 3   | username | `string` | COTURN username              | required     |               |
 | 4   | password | `string` | COTURN password              | optional     |               |
 
 ---

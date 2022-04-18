@@ -25,6 +25,11 @@ const RoomInfo = (module.exports.RoomInfo = class {
             }
             if (args.username !== undefined && args.username !== null) {
                 this.username = args.username;
+            } else {
+                throw new Thrift.TProtocolException(
+                    Thrift.TProtocolExceptionType.UNKNOWN,
+                    'Required field username is unset!',
+                );
             }
             if (args.password !== undefined && args.password !== null) {
                 this.password = args.password;
