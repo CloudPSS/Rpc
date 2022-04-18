@@ -1,5 +1,5 @@
 $index = Invoke-WebRequest "https://dlcdn.apache.org/thrift"
-$versions = (
+$versions = @(
   $index.Links 
   | Where-Object { $_.href.EndsWith("/") -and [char]::IsDigit($_.href[0]) }
   | ForEach-Object { $_.href.SubString(0, $_.href.Length - 1) }
