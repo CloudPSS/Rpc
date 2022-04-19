@@ -1,11 +1,32 @@
 import type { LocationRange } from 'peggy';
 import { inspect, InspectOptionsStylized } from 'node:util';
 import { inspectDoc } from './utils.js';
-import { Token, type FieldType, type Identifier } from './token.js';
+import { Literal, Token, type FieldType, type Identifier } from './token.js';
 
 export class ConstValue extends Token {
+    static unwrap(value: unknown): unknown {
+        if (value instanceof ConstValue) {
+            return this.unwrap(value.value);
+        }
+        if (value instanceof Literal) {
+            return value.value;
+        }
+        if (Array.isArray(value)) {
+            return value.map((v) => this.unwrap(v));
+        }
+        if (value instanceof Map) {
+            const map = new Map();
+            for (const [k, v] of value) {
+                map.set(this.unwrap(k), this.unwrap(v));
+            }
+            return map;
+        }
+        return value;
+    }
+
     constructor(location: LocationRange, readonly value: unknown) {
         super(location);
+        this.value = ConstValue.unwrap(value);
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -20,14 +41,14 @@ export class Field extends Token {
         readonly required: boolean | null,
         readonly type: FieldType,
         readonly name: Identifier,
-        readonly def: FieldType,
+        readonly def?: ConstValue,
         readonly doc?: string,
     ) {
         super(location);
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
-        const r = options.stylize(this.required === null ? '' : this.required ? ' required' : ' optional', 'symbol');
+        const r = options.stylize(this.required === null ? '' : this.required ? ' required' : ' optional', 'special');
         const d = this.def != null ? ` = ${inspect(this.def, options)}` : '';
         return `${options.stylize(String(this.id ?? '?'), 'number')}:${r} ${inspect(this.type, options)} ${inspect(
             this.name,
@@ -55,7 +76,12 @@ export class Const extends Token {
     }
 }
 export class EnumValue extends Token {
-    constructor(location: LocationRange, readonly name: Identifier, readonly value: number | null) {
+    constructor(
+        location: LocationRange,
+        readonly name: Identifier,
+        readonly value: number | null,
+        readonly doc?: string,
+    ) {
         super(location);
     }
     /** @inheritdoc */
@@ -65,7 +91,12 @@ export class EnumValue extends Token {
     }
 }
 export class Enum extends Token {
-    constructor(location: LocationRange, readonly name: Identifier, readonly values: Field[]) {
+    constructor(
+        location: LocationRange,
+        readonly name: Identifier,
+        readonly values: EnumValue[],
+        readonly doc?: string,
+    ) {
         super(location);
     }
     /** @inheritdoc */
@@ -133,7 +164,7 @@ export class Method extends Token {
 }
 
 export class Typedef extends Token {
-    constructor(location: LocationRange, readonly name: Identifier, readonly type: FieldType) {
+    constructor(location: LocationRange, readonly name: Identifier, readonly type: FieldType, readonly doc?: string) {
         super(location);
     }
     /** @inheritdoc */

@@ -45,8 +45,10 @@ export class Literal extends Token {
     }
 }
 
+/** FieldType */
 export type FieldType = BaseType | ContainerType | Identifier;
 
+/** BaseType */
 export class BaseType extends Token {
     constructor(location: LocationRange, readonly name: string) {
         super(location);
@@ -57,6 +59,7 @@ export class BaseType extends Token {
     }
 }
 
+/** ContainerType */
 export class ContainerType extends Token {
     constructor(location: LocationRange, readonly name: string, readonly types: FieldType[]) {
         super(location);

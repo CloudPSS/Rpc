@@ -2,8 +2,8 @@ import type { LocationRange } from 'peggy';
 import { inspect, type InspectOptionsStylized } from 'node:util';
 import { Token, type Identifier } from './token.js';
 
-/** include directive */
-export class Include extends Token {
+/** Base class for include and cpp_include */
+class IncludeBase extends Token {
     constructor(location: LocationRange, readonly path: string) {
         super(location);
     }
@@ -13,8 +13,11 @@ export class Include extends Token {
     }
 }
 
+/** include directive */
+export class Include extends IncludeBase {}
+
 /** cpp_include directive */
-export class CppInclude extends Include {}
+export class CppInclude extends IncludeBase {}
 
 /** namespace directive */
 export class Namespace extends Token {

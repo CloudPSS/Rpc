@@ -1,5 +1,7 @@
 {{
   import * as t from './parser-import.js';
+
+  const debug = true ? console.debug : () => {};
 }}
 
 {
@@ -7,12 +9,14 @@
   let mdoc = null;
   let fdoc = null;
   let sdoc = null;
-  function doc() {
+  function doc(pos) {
     const d = _doc;
     _doc = null;
     if (d) {
+      debug('pop', pos, d);
       return d;
     } else {
+      debug('pop', pos, undefined);
       return undefined;
     }
   }
@@ -26,19 +30,19 @@ Header = @(Include / CppInclude / Namespace) __
 
 Include
   = "include" _ file:Literal {
-      doc();
+      doc("include_end");
       return new t.Include(location(), file);
     }
 
 CppInclude
   = "cpp_include" _ file:Literal {
-      doc();
+      doc("cpp_include_end");
       return new t.CppInclude(location(), file);
     }
 
 Namespace
   = "namespace" _ scope:NamespaceScope _ namespace:Identifier {
-      doc();
+      doc("namespace_end");
       return new t.Namespace(location(), scope, namespace);
     }
 
@@ -52,7 +56,7 @@ Const
   = "const"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("const");
         return true;
       }
     type:FieldType
@@ -62,9 +66,12 @@ Const
     "="
     __
     value:ConstValue
+    & {
+        doc("const_end");
+        return true;
+      }
     __
     ListSeparator? {
-      doc();
       return new t.Const(location(), type, id, value, sdoc);
     }
 
@@ -72,15 +79,18 @@ Typedef
   = "typedef"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("typedef");
         return true;
       }
-    type:DefinitionType
+    type:FieldType
     _
     id:Identifier
+    & {
+        doc("typedef_end");
+        return true;
+      }
     __
     ListSeparator? {
-      doc();
       return new t.Typedef(location(), id, type, sdoc);
     }
 
@@ -88,7 +98,7 @@ Enum
   = "enum"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("enum");
         return true;
       }
     id:Identifier
@@ -97,14 +107,12 @@ Enum
     __
     values:(
       e:Identifier value:(__ "=" __ @IntConstant)? __ ListSeparator? __ {
-          return new t.EnumValue(location(), e, value, doc());
+          return new t.EnumValue(location(), e, value, doc("enum_value_end"));
         }
     )*
     __
-    "}"
-    __
-    ListSeparator? {
-      doc();
+    "}" {
+      doc("enum_end");
       return new t.Enum(location(), id, values, sdoc);
     }
 
@@ -112,7 +120,8 @@ Struct
   = "struct"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("struct");
+        debug(1,sdoc);
         return true;
       }
     id:Identifier
@@ -122,7 +131,7 @@ Struct
     fields:Field*
     __
     "}" {
-      doc();
+      doc("struct_end");
       return new t.Struct(location(), id, fields, sdoc);
     }
 
@@ -130,7 +139,7 @@ Union
   = "union"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("union");
         return true;
       }
     id:Identifier
@@ -140,7 +149,7 @@ Union
     fields:Field*
     __
     "}" {
-      doc();
+      doc("union_end");
       return new t.Union(location(), id, fields, sdoc);
     }
 
@@ -148,7 +157,7 @@ Exception
   = "exception"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("exception");
         return true;
       }
     id:Identifier
@@ -158,7 +167,7 @@ Exception
     fields:Field*
     __
     "}" {
-      doc();
+      doc("exception_end");
       return new t.Exception(location(), id, fields, sdoc);
     }
 
@@ -166,7 +175,7 @@ Service
   = "service"
     _
     & {
-        sdoc = doc();
+        sdoc = doc("service");
         return true;
       }
     id:Identifier
@@ -177,7 +186,7 @@ Service
     methods:Function*
     __
     "}" {
-      doc();
+      doc("service_end");
       return new t.Service(location(), id, base, methods, sdoc);
     }
 
@@ -189,7 +198,7 @@ Field
     _
     name:Identifier
     & {
-        fdoc = doc();
+        fdoc = doc("field");
         return true;
       }
     def:(__ "=" __ @ConstValue)?
@@ -209,7 +218,7 @@ Function
     _
     id:Identifier
     & {
-        mdoc = doc();
+        mdoc = doc("function");
         return true;
       }
     __
@@ -230,13 +239,13 @@ FunctionType
 Throws = "throws" __ "(" __ @Field* __ ")"
 
 FieldType
-  = BaseType
-  / ContainerType
-  / Identifier
-
-DefinitionType
-  = BaseType
-  / ContainerType
+  = ContainerType
+  / id:Identifier {
+    if (t.BaseTypeName.includes(id.name)) {
+      return new t.BaseType(id.location, id.name);
+    }
+    return id;
+  }
 
 BaseType
   = ("bool" / "byte" / "i8" / "i16" / "i32" / "i64" / "double" / "string" / "binary") {
@@ -295,8 +304,11 @@ Whitespace
 
 Empty = [ \t\r\n]
 
-LineComment = "//" [^\r\n]*
+LineComment = ("//" / "#") [^\r\n]*
 
 BlockComment = "/*" [^*]* ("*" [^/]*)* "/"
 
-DocComment = "/**" [^*]* ("*" [^/]*)* "/" { _doc = text().slice(3, -2).trim(); }
+DocComment = "/**" [^*]* ("*" [^/]*)* "/" { 
+  _doc = t.trimDoc(text());
+  debug('push', _doc)
+}
