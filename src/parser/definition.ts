@@ -151,7 +151,7 @@ export class Service extends Token {
 export class Method extends Token {
     constructor(
         location: LocationRange,
-        readonly result: Field,
+        readonly result: FieldType,
         readonly name: Identifier,
         readonly params: Field[],
         readonly throws: Field[] | null,

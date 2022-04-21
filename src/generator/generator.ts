@@ -7,6 +7,7 @@ import {
     EnumValue,
     Exception,
     Field,
+    Method,
     Service,
     Struct,
     Typedef,
@@ -59,6 +60,7 @@ import * as ${baseName} from ${JSON.stringify(file + '.js')};
 
     private type(type: FieldType, wrap = false): string {
         if (type instanceof BaseType) {
+            if (type.name === 'void') return 'void';
             return `T${type.name[0].toUpperCase()}${type.name.slice(1)}`;
         }
         if (type instanceof ContainerType) {
@@ -167,7 +169,7 @@ import * as ${baseName} from ${JSON.stringify(file + '.js')};
                                 .map((v) => print(v, containerType.types[0]))
                                 .join(', ')}}`;
                         else
-                            return `new Set<${this.type(containerType.types[0])}>([${value
+                            return `new TSet<${this.type(containerType.types[0])}>([${value
                                 .map((v) => print(v, containerType.types[0]))
                                 .join(', ')}])`;
                     default:
@@ -197,7 +199,7 @@ import * as ${baseName} from ${JSON.stringify(file + '.js')};
                             )
                             .join(', ')}}`;
                     } else {
-                        return `new Map<${this.type(containerType.types[0])}, ${this.type(containerType.types[1])}>([
+                        return `new TMap<${this.type(containerType.types[0])}, ${this.type(containerType.types[1])}>([
 ${[...value]
     .map(
         ([k, v]) =>
@@ -400,11 +402,48 @@ ${e.fields.map((f) => this.field(f, '    ')).join('\n')}
 `;
     }
 
+    private method(m: Method, indent: string): string {
+        const args = m.params.map((a) => `${a.name.safeName()}: ${this.type(a.type)}`).join(', ');
+        let retType = this.type(m.result);
+        let throws = m.throws ?? [];
+        if (m.oneway) {
+            if (retType !== 'void') {
+                this.printError(new CompileError(`Oneway method must return void`, m.result.location));
+                retType = 'void';
+            }
+            if (throws.length > 0) {
+                this.printError(
+                    new CompileError(`Oneway method cannot throw exceptions`, {
+                        start: throws[0].location.start,
+                        end: throws[throws.length - 1].location.end,
+                        source: m.location.source as unknown,
+                    }),
+                );
+                throws = [];
+            }
+        }
+
+        let doc = m.doc ?? '';
+        if (m.params.length > 0) {
+            doc += `
+${m.params.map((t) => `@param ${t.name.name}${t.doc ? ` - ${t.doc}` : ''}`).join('\n')}`;
+        }
+        if (throws.length > 0) {
+            doc += `
+${throws.map((t) => `@throws {${this.type(t.type)}} ${t.name.name}${t.doc ? ` - ${t.doc}` : ''}`).join('\n')}`;
+        }
+        return `${this.jsdoc(doc, indent)}
+${indent}abstract ${m.name.safeName()}(${args}): Promise<${retType}>;
+`;
+    }
+
     private service(s: Service): string {
         const base = s.base ? s.base.name : `TService`;
         return `
 ${this.jsdoc(s.doc)}
-class ${s.name.safeName()} extends ${base} {}
+export abstract class ${s.name.safeName()} extends ${base} {
+${s.methods.map((m) => this.method(m, '    ')).join('\n')}
+}
 `;
     }
 

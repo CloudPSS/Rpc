@@ -46,6 +46,28 @@ export const JS_RESERVED = new Set([
     'static',
     'yield',
     'await',
+
+    'Promise',
+    'TBool',
+    'TByte',
+    'TI8',
+    'TI16',
+    'TI32',
+    'TI64',
+    'TDouble',
+    'TString',
+    'TBinary',
+    'TMap',
+    'TMapConstructor',
+    'TSet',
+    'TSetConstructor',
+    'TList',
+    'TListConstructor',
+    'TData',
+    'TException',
+    'TStruct',
+    'TUnion',
+    'TService',
 ]);
 
 /** check if a value is a valid js identifier */

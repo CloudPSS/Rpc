@@ -135,11 +135,12 @@ service RoomService {
   /** find existing room */
   map cpp_type "map"<RoomInfo,map<RoomInfo,RoomInfo>> list3()throws ( RoomNotFoundException e2) 
   void remove(1: string id) throws (1: RoomNotFoundException e) 
-  oneway void update(1: string id)
+  oneway void update(1: string id) ;
   bool pppbool(1: bool id)
 }
 /** rtc room service */
 service RoomService2 extends RoomService {
   /** create a new room */
   binary b(binary b)
+  Promise c(/** input */Promise c) throws (1: /** why not */ RoomNotFoundException e) 
 }
