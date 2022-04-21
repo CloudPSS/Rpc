@@ -1,14 +1,14 @@
 {{
   import * as t from './parser-import.js';
-
-  const debug = true ? console.debug : () => {};
 }}
 
 {
+  const debug = options.debug ? console.debug : () => {};
   let _doc = null;
   let mdoc = null;
   let fdoc = null;
   let sdoc = null;
+
   function doc(pos) {
     const d = _doc;
     _doc = null;
@@ -269,13 +269,17 @@ ListType = "list" __ "<" __ i:FieldType __ ">" (__ CppType)? { return new t.Cont
 CppType = "cpp_type" _ Literal
 
 ConstValue
-  = v:(DoubleConstant / IntConstant / Literal / Identifier / ConstList / ConstMap) {
+  = v:(HexConstant / DoubleConstant / IntConstant / Literal / Identifier / ConstList / ConstMap) {
       return new t.ConstValue(location(), v);
     }
 
 DoubleConstant "number" = ("+" / "-")? [0-9]+ ("." [0-9]+)? (("E" / "e") IntConstant)? { return parseFloat(text()); }
 
-IntConstant "integer" = ("+" / "-")? [0-9]+ { return parseInt(text(), 10); }
+HexConstant "hex integer" 
+  = ("+" / "-")? "0x" [0-9a-fA-F]+ { return parseInt(text(), 16); }
+
+IntConstant "integer" 
+  = ("+" / "-")? [0-9]+ { return parseInt(text(), 10); }
 
 ConstList = "[" __ @(@ConstValue __ ListSeparator? __)* __ "]"
 
@@ -284,7 +288,24 @@ ConstMap
       return new Map(i || []);
     }
 
-Literal "Literal" = (("\"" [^"]* "\"") / ("'" [^']* "'")) { return new t.Literal(location(), text()); }
+EscapedChar
+  = "\\"
+    @(
+        '"'
+      / "'"
+      / "\\"
+      / "b" { return "\b"; }
+      / "f" { return "\f"; }
+      / "n" { return "\n"; }
+      / "r" { return "\r"; }
+      / "t" { return "\t"; }
+      / "u" digits:$([0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]) {
+          return String.fromCharCode(parseInt(digits, 16));
+        }
+    )
+
+Literal "Literal" 
+  = chars:(("\"" @(EscapedChar / [^"])* "\"") / ("'" @(EscapedChar / [^'])* "'")) { return new t.Literal(location(), chars.join('')); }
 
 Identifier "Identifier" = [a-zA-Z_] [a-zA-Z0-9._]* { return new t.Identifier(location(), text()); }
 

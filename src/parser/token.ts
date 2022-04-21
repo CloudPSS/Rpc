@@ -1,5 +1,8 @@
 import type { LocationRange } from 'peggy';
 import { inspect, InspectOptionsStylized } from 'node:util';
+import { KEYWORDS } from '../constants.js';
+import { SyntaxError } from './thrift-idl.g.js';
+import { JS_RESERVED } from '../util.js';
 
 /** Token */
 export abstract class Token {
@@ -12,31 +15,36 @@ export abstract class Token {
 export class Identifier extends Token {
     constructor(location: LocationRange, readonly name: string) {
         super(location);
+        if (KEYWORDS.includes(name)) {
+            throw new SyntaxError(`Identifier "${name}" is a reserved keyword`, null, name, location);
+        }
     }
     /** @inheritdoc */
     protected override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
         return options.stylize(this.name, 'symbol');
     }
+
+    /** Throws a syntax error if the identifier is not a valid identifier */
+    assertNoDot(): void {
+        if (this.name.includes('.')) {
+            throw new SyntaxError(`Identifier "${this.name}" contains dot`, null, this.name, this.location);
+        }
+    }
+
+    /** add $ to js reserved keywords */
+    safeName(): string {
+        if (JS_RESERVED.has(this.name)) {
+            return `$${this.name}`;
+        }
+        return this.name;
+    }
 }
 
 /** String literal */
 export class Literal extends Token {
-    /** parse Literal */
-    private static parse(text: string): string {
-        const t = text.slice(1, -1);
-        try {
-            const parsed = JSON.parse(`"${t}"`) as unknown;
-            if (typeof parsed === 'string') {
-                return parsed;
-            }
-        } catch {
-            // ignore
-        }
-        return t;
-    }
     constructor(location: LocationRange, text: string) {
         super(location);
-        this.value = Literal.parse(text);
+        this.value = text;
     }
     readonly value: string;
     /** @inheritdoc */

@@ -45,6 +45,7 @@ export class Field extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -66,6 +67,7 @@ export class Const extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -83,6 +85,7 @@ export class EnumValue extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -98,6 +101,7 @@ export class Enum extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -108,6 +112,7 @@ export class Enum extends Token {
 export class StructLike extends Token {
     constructor(location: LocationRange, readonly name: Identifier, readonly fields: Field[], readonly doc?: string) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -131,6 +136,7 @@ export class Service extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -153,6 +159,7 @@ export class Method extends Token {
         readonly doc?: string,
     ) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {
@@ -166,6 +173,7 @@ export class Method extends Token {
 export class Typedef extends Token {
     constructor(location: LocationRange, readonly name: Identifier, readonly type: FieldType, readonly doc?: string) {
         super(location);
+        name.assertNoDot();
     }
     /** @inheritdoc */
     override [inspect.custom](depth: number, options: InspectOptionsStylized): string {

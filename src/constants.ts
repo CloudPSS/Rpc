@@ -2,6 +2,10 @@ export const BaseTypeName = ['bool', 'byte', 'i8', 'i16', 'i32', 'i64', 'double'
 /** BaseTypeNames */
 export type BaseTypeName = typeof BaseTypeName[number];
 
+export const ContainerTypeName = ['map', 'set', 'list'] as const;
+/** ContainerTypeNames */
+export type ContainerTypeName = typeof ContainerTypeName[number];
+
 export const KEYWORDS = [
     'BEGIN',
     'END',
