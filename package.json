@@ -1,7 +1,7 @@
 {
   "name": "@cloudpss/rpc",
-  "description": "Rpc used in cloudpss, a simple shim of apache thrift",
-  "version": "0.3.2",
+  "description": "Rpc used in cloudpss, based on apache thrift",
+  "version": "1.0.0-alpha.0",
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
@@ -21,7 +21,7 @@
   },
   "types": "dist/index.d.ts",
   "bin": {
-    "thrift": "./bin/thrift.js"
+    "thrift": "./bin/cli.js"
   },
   "keywords": [
     "thrift",
@@ -56,7 +56,8 @@
     "peggy": "^1.2.0",
     "rimraf": "^3.0.2",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.3"
+    "typescript": "^4.6.3",
+    "rpc-legacy": "npm:@cloudpss/rpc@^0.3.4"
   },
   "dependencies": {
     "@types/node": ">= 16",
