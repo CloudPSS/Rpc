@@ -1,4 +1,4 @@
-import type { ConnectionOptions as TlsConnectionOptions } from 'tls';
+import type { ConnectionOptions as TlsConnectionOptions } from 'node:tls';
 import type { ConnectOptions, Connection } from 'thrift';
 import { Multiplexer, createConnection, createSSLConnection } from 'thrift';
 import { isObject, getServiceName, getClient } from './utils.js';
@@ -24,7 +24,6 @@ export interface ThriftClient extends Connection {
     get<TClient>(name: string, service: ServiceModule<TClient>): Client<TClient>;
     /**
      * 获取一个服务
-     *
      * @throws 没有找到该服务
      */
     get<TClient>(name: string): Client<TClient>;
@@ -74,7 +73,7 @@ export function createClient(options?: ClientOptions): ThriftClient {
                     throw new Error(`Service with name "${name}" has not created`);
                 }
                 const client = getClient(module);
-                service = multiplexer.createClient(name, client, this);
+                service = multiplexer.createClient(name, client, this) as Client<TClient>;
                 clients.set(name, service);
                 return service as Client<TClient>;
             },
