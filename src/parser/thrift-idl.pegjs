@@ -276,10 +276,10 @@ ConstValue
 DoubleConstant "number" = ("+" / "-")? [0-9]+ ("." [0-9]+)? (("E" / "e") IntConstant)? { return parseFloat(text()); }
 
 HexConstant "hex integer" 
-  = ("+" / "-")? "0x" [0-9a-fA-F]+ { return parseInt(text(), 16); }
+  = ("+" / "-")? "0x" [0-9a-fA-F]+ { return BigInt(text()); }
 
 IntConstant "integer" 
-  = ("+" / "-")? [0-9]+ { return parseInt(text(), 10); }
+  = ("+" / "-")? [0-9]+ { return BigInt(text()); }
 
 ConstList = "[" __ @(@ConstValue __ ListSeparator? __)* __ "]"
 

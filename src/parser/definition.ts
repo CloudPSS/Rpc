@@ -3,8 +3,24 @@ import { inspect, InspectOptionsStylized } from 'node:util';
 import { inspectDoc } from './utils.js';
 import { Literal, Token, type FieldType, type Identifier } from './token.js';
 
+/** 常量数据 */
+type ConstData =
+    // HexConstant, IntConstant
+    | bigint
+    // DoubleConstant
+    | number
+    // Literal
+    | string
+    // Identifier
+    | Identifier
+    // ConstList
+    | ConstData[]
+    // ConstMap
+    | Map<ConstData, ConstData>;
+/** 表示一个常量 */
 export class ConstValue extends Token {
-    static unwrap(value: unknown): unknown {
+    /** 取出常量值 */
+    private static unwrap(value: ConstData | Literal | ConstValue): ConstData {
         if (value instanceof ConstValue) {
             return this.unwrap(value.value);
         }
@@ -24,7 +40,7 @@ export class ConstValue extends Token {
         return value;
     }
 
-    constructor(location: LocationRange, readonly value: unknown) {
+    constructor(location: LocationRange, readonly value: ConstData) {
         super(location);
         this.value = ConstValue.unwrap(value);
     }
@@ -34,6 +50,7 @@ export class ConstValue extends Token {
     }
 }
 
+/** 表示一个字段的定义 */
 export class Field extends Token {
     constructor(
         location: LocationRange,

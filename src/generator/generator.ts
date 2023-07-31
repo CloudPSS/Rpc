@@ -18,6 +18,19 @@ import { CppInclude, Header, Include, Namespace } from '../parser/header.js';
 import { BaseType, ContainerType, FieldType, Identifier, Token } from '../parser/token.js';
 import { CompileError } from './errors.js';
 import { isJsIdentifier } from '../util.js';
+import pkgJson from '#package.json' assert { type: 'json' };
+
+/** 解析的类型，其类型参数未解析 */
+type ResolvedType = BaseType | ContainerType | Enum | Struct | Union | Exception | UNRESOLVED;
+
+/** 表示未解析 */
+class UNRESOLVED {
+    readonly name = '<unresolved>';
+    /** 名称 */
+    safeName(): string {
+        return this.name;
+    }
+}
 
 /** Helper class for code generation */
 export class Generator {
@@ -28,15 +41,15 @@ export class Generator {
 
     /** result of generation */
     hasError = false;
-
-    private baseTypes = new Map<string, BaseType>();
-    private containerTypes = new Map<string, ContainerType>();
-
+    /** 定义的别名，key 为 ts 名称 */
+    private typeNames = new Map<string, ResolvedType>();
+    /** 输出错误信息 */
     private printError(error: Error): void {
         this.hasError = true;
         this.document.printError(error);
     }
 
+    /** 生成 Header */
     private header(header: Header): string {
         if (header instanceof Include) {
             const file = header.path.value;
@@ -58,173 +71,143 @@ import * as ${baseName} from ${JSON.stringify(file + '.js')};
         return '';
     }
 
-    private type(type: FieldType, wrap = false): string {
+    /** 生成表示 type 的 ts 类型 */
+    private type(type: FieldType | UNRESOLVED): string {
         if (type instanceof BaseType) {
             if (type.name === 'void') return 'void';
-            return `T${type.name[0].toUpperCase()}${type.name.slice(1)}`;
+            return `$.T${type.name[0].toUpperCase()}${type.name.slice(1)}`;
         }
         if (type instanceof ContainerType) {
-            let t;
             switch (type.name) {
                 case 'map':
                     if (type.types.length !== 2) {
                         this.printError(new CompileError('map type must have 2 type parameters', type.location));
-                        t = `TMap<any, any>`;
+                        return `$.TMap<any, any>`;
                     } else {
-                        t = `TMap<${this.type(type.types[0])}, ${this.type(type.types[1])}>`;
+                        return `$.TMap<${this.type(type.types[0])}, ${this.type(type.types[1])}>`;
                     }
-                    break;
                 case 'set':
                     if (type.types.length !== 1) {
                         this.printError(new CompileError('set type must have 1 type parameter', type.location));
-                        t = `TSet<any>`;
+                        return `$.TSet<any>`;
                     } else {
-                        t = `TSet<${this.type(type.types[0])}>`;
+                        return `$.TSet<${this.type(type.types[0])}>`;
                     }
-                    break;
                 case 'list':
                     if (type.types.length !== 1) {
                         this.printError(new CompileError('list type must have 1 type parameter', type.location));
-                        t = `TList<any>`;
+                        return `$.TList<any>`;
                     } else {
-                        t = `TList<${this.type(type.types[0])}>`;
+                        return `$.TList<${this.type(type.types[0])}>`;
                     }
-                    break;
                 default:
                     this.printError(new CompileError(`unknown container type ${type.name}`, type.location));
-                    t = `${type.name}<${type.types.map((t) => this.type(t)).join(', ')}>`;
-                    break;
+                    return `${type.name}<${type.types.map((t) => this.type(t)).join(', ')}>`;
             }
-            return wrap ? `TData<${t}>` : t;
         }
-        if (this.baseTypes.has(type.safeName())) return type.safeName();
-        if (this.containerTypes.has(type.safeName())) return wrap ? `TData<${type.safeName()}>` : type.safeName();
-        return wrap ? `TData<typeof ${type.safeName()}>` : type.safeName();
+        return type.safeName();
     }
-    private construct(content: string, type: FieldType): string {
-        if (type instanceof BaseType) {
+    /** 解析 typedef 定义的别名 */
+    private resolve(type: FieldType | UNRESOLVED): ResolvedType {
+        if (type instanceof UNRESOLVED) return type;
+        if (type instanceof BaseType || type instanceof ContainerType) {
+            return type;
+        }
+        return this.typeNames.get(type.safeName()) ?? new UNRESOLVED();
+    }
+
+    /** 使用 content 的值构造 type 类型的实例 */
+    private construct(content: string, type: FieldType | UNRESOLVED): string {
+        const resolved = this.resolve(type);
+        if (resolved instanceof BaseType) {
             return `${this.type(type)}(${content})`;
         }
-        if (type instanceof ContainerType) {
-            if (type.name === 'list') return `TList.from<${this.type(type.types[0])}>(${content})`;
+        if (resolved instanceof ContainerType) {
+            if (resolved.name === 'list') return `${this.type(type)}.from(${content})`;
             return `new ${this.type(type)}(${content})`;
-        }
-        if (this.containerTypes.get(type.safeName())?.name === 'list') {
-            return `${this.type(type)}.from(${content})`;
-        }
-        if (this.baseTypes.has(type.safeName())) {
-            return `${this.type(type)}(${content})`;
         }
         return `new ${this.type(type)}(${content})`;
     }
+
+    /** 生成常量的表示 */
     private constValue(constValue: ConstValue, type: FieldType, mode: 'literal' | 'inspect' = 'literal'): string {
         const printKey = (key: unknown): string => {
             if (key instanceof Identifier) {
-                return `[${key.safeName()}]`;
-            }
-            if (typeof key != 'string') {
-                this.printError(
-                    new CompileError(
-                        `Invalid constants value for container type ${type.name}`,
-                        (key instanceof Token ? key : constValue).location,
-                    ),
-                );
+                return key.safeName();
             }
             const k = String(key);
             if (isJsIdentifier(k)) return k;
             return `'${k.replace(/'/g, "\\'")}'`;
         };
-        const print = (value: unknown, type: FieldType | null, indent: string): string => {
+        const print = (value: ConstValue['value'], type: FieldType | UNRESOLVED, indent: string): string => {
             if (value == null) return 'null';
             if (value instanceof Identifier) return value.safeName();
-            if (typeof value != 'object') {
-                if (
-                    type instanceof ContainerType ||
-                    (type instanceof Identifier && this.containerTypes.get(type.safeName()))
-                ) {
-                    this.printError(
-                        new CompileError(
-                            `Invalid constants value for container type ${type.name}`,
-                            constValue.location,
-                        ),
-                    );
-                    return JSON.stringify(value);
-                }
-                const base = type instanceof BaseType ? type.name : this.baseTypes.get(type?.safeName() ?? '')?.name;
-                if (type && base === 'binary') {
-                    return this.construct(JSON.stringify(value), type);
-                }
-                return JSON.stringify(value);
-            }
+
+            const resolved = this.resolve(type);
             if (Array.isArray(value)) {
-                const containerType = type instanceof ContainerType ? type : this.containerTypes.get(type.name);
-                if (containerType == null)
-                    throw new CompileError(`Invalid list constant for type ${type.name}`, constValue.location);
-                switch (containerType.name) {
-                    case 'list':
-                        return `[${value.map((v) => print(v, containerType.types[0])).join(', ')}]`;
-                    case 'set':
-                        if (mode === 'inspect')
-                            return `Set(${value.length}) {${value
-                                .map((v) => print(v, containerType.types[0]))
-                                .join(', ')}}`;
-                        else
-                            return `new TSet<${this.type(containerType.types[0])}>([${value
-                                .map((v) => print(v, containerType.types[0]))
-                                .join(', ')}])`;
-                    default:
-                        throw new CompileError(`Invalid list constant for type ${type.name}`, constValue.location);
+                if (resolved instanceof ContainerType && (resolved.name === 'list' || resolved.name === 'set')) {
+                    const itemType = resolved.types[0];
+                    switch (resolved.name) {
+                        case 'list':
+                            if (mode === 'inspect')
+                                return `${type.name}(${value.length}) {${value
+                                    .map((v) => print(v, itemType, ''))
+                                    .join(', ')}}`;
+                            else return `[${value.map((v) => print(v, itemType, '')).join(', ')}]`;
+                        case 'set':
+                            if (mode === 'inspect')
+                                return `${type.name}(${value.length}) {${value
+                                    .map((v) => print(v, itemType, ''))
+                                    .join(', ')}}`;
+                            else
+                                return this.construct(`[${value.map((v) => print(v, itemType, '')).join(', ')}]`, type);
+                    }
                 }
-            }
-            if (value instanceof Map) {
-                if (type instanceof BaseType)
-                    throw new CompileError(`Invalid constants value for base type ${type.name}`, constValue.location);
-                const containerType =
-                    type instanceof ContainerType ? type : this.containerTypes.get(type?.safeName() ?? '');
-                if (type && containerType) {
-                    if (containerType.name !== 'map')
-                        throw new CompileError(
-                            `Invalid map constant for container type ${type.name}`,
-                            constValue.location,
-                        );
+                this.printError(new CompileError(`Invalid list constant for type ${type.name}`, constValue.location));
+            } else if (value instanceof Map) {
+                if (resolved instanceof ContainerType && resolved.name === 'map') {
+                    const [keyType, valueType] = resolved.types;
                     if (mode === 'inspect') {
-                        return `Map(${value.size}) {${[...value]
-                            .map(
-                                ([k, v]) =>
-                                    `${print(k, containerType.types[0], '')} => ${print(
-                                        v,
-                                        containerType.types[1],
-                                        '',
-                                    )}`,
-                            )
+                        return `${type.name}(${value.size}) {${[...value]
+                            .map(([k, v]) => `${print(k, keyType, '')} => ${print(v, valueType, '')}`)
                             .join(', ')}}`;
                     } else {
-                        return `new TMap<${this.type(containerType.types[0])}, ${this.type(containerType.types[1])}>([
-${[...value]
-    .map(
-        ([k, v]) =>
-            `${indent}    [${print(k, containerType.types[0], indent + '    ')}, ${print(
-                v,
-                containerType.types[1],
-                indent + '    ',
-            )}],`,
-    )
-    .join('\n')}
-${indent}])`;
+                        return this.construct(
+                            `[${[...value]
+                                .map(([k, v]) => `[${print(k, keyType, '')}, ${print(v, valueType, '')}]`)
+                                .join(', ')}]`,
+                            type,
+                        );
                     }
                 }
 
-                const map = `{
-${[...value].map(([k, v]) => `${indent}    ${printKey(k)}: ${print(v, null, indent + '    ')},`).join('\n')}
+                if (resolved instanceof Struct || resolved instanceof Union || resolved instanceof Exception) {
+                    const map = `{
+${[...value]
+    .map(([k, v]) => {
+        const key = k instanceof Identifier ? k.name : String(k);
+        const f = resolved.fields.find((f) => f.name.name === key);
+        return `${indent}    ${printKey(key)}: ${print(v, f?.type ?? new UNRESOLVED(), indent + '    ')},`;
+    })
+    .join('\n')}
 ${indent}}`;
-                if (!(type instanceof Identifier)) return map;
-                if (mode === 'inspect') {
-                    return `${type.safeName()} ${map}`;
-                } else {
-                    return `new ${type.safeName()}(${map})`;
+                    if (mode === 'inspect') {
+                        return `${type.name} ${map}`;
+                    } else {
+                        return this.construct(map, type);
+                    }
                 }
+                this.printError(new CompileError(`Invalid map constant for type ${type.name}`, constValue.location));
+            } else {
+                if (!(resolved instanceof BaseType)) {
+                    this.printError(
+                        new CompileError(`Invalid constant value for type ${type.name}`, constValue.location),
+                    );
+                }
+                const literal = typeof value == 'bigint' ? `${value}n` : JSON.stringify(value);
+                return mode === 'literal' ? this.construct(literal, type) : literal;
             }
-            throw new CompileError(`Invalid constants value`, constValue.location);
+            return JSON.stringify(value);
         };
 
         return print(constValue.value, type, '');
@@ -239,13 +222,21 @@ ${lines.map((line) => `${indent} * ${line}`).join('\n')}
 ${indent} */`;
     }
 
-    private field(f: Field, indent = '', wrap = false): string {
+    private fieldCreation(f: Field, indent = ''): string {
         let doc = f.doc ?? '';
         if (f.def != null) {
             doc += `\n@default ${this.constValue(f.def, f.type, 'inspect')}`;
         }
         return `${this.jsdoc(doc, indent)}
-${indent}${f.name.safeName()}${f.required !== true ? '?' : ''}: ${this.type(f.type, wrap)};`;
+${indent}${f.name.safeName()}${f.required !== true ? '?' : ''}: $.TData<${this.type(f.type)}>;`;
+    }
+    private field(f: Field, indent = ''): string {
+        let doc = f.doc ?? '';
+        if (f.def != null) {
+            doc += `\n@default ${this.constValue(f.def, f.type, 'inspect')}`;
+        }
+        return `${this.jsdoc(doc, indent)}
+${indent}${f.name.safeName()}${f.required !== true ? '?' : ''}: ${this.type(f.type)};`;
     }
 
     private fieldInit(f: Field, indent = ''): string {
@@ -266,11 +257,13 @@ ${indent}    throw new Error('Missing required field ${n}');`;
 ${indent}    this.${n} = ${this.construct(`data.${n}`, f.type)};`;
     }
 
+    /** 生成枚举值 */
     private enumValue(e: EnumValue, indent = ''): string {
         return `${this.jsdoc(e.doc, indent)}
 ${indent}${e.name.safeName()}${e.value != null ? ` = ${e.value}` : ''},`;
     }
 
+    /** 生成枚举定义 */
     private enum(e: Enum): string {
         return `
 ${this.jsdoc(e.doc)}
@@ -280,55 +273,24 @@ ${e.values.map((f) => this.enumValue(f, '    ')).join('\n')}
 `;
     }
 
-    private typedefInit(t: Typedef): void {
-        const newType = t.name.safeName();
-        if (t.type instanceof BaseType) {
-            this.baseTypes.set(newType, t.type);
-        } else if (t.type instanceof ContainerType) {
-            this.containerTypes.set(newType, t.type);
-        } else if (this.baseTypes.has(t.type.safeName())) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.baseTypes.set(newType, this.baseTypes.get(t.type.name)!);
-        } else if (this.containerTypes.has(t.type.safeName())) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.containerTypes.set(newType, this.containerTypes.get(t.type.name)!);
-        }
-    }
-
+    /** 生成 typedef 定义 */
     private typedef(t: Typedef): string {
         const newType = t.name.safeName();
         const oldType = this.type(t.type);
-        let oldValue = oldType;
-        const typeParams = /<(.+)>$/.exec(oldType);
-        if (typeParams) {
-            oldValue = oldValue.replace(/<(.+)>$/, '');
-            switch (oldValue) {
-                case 'TMap':
-                    oldValue = `TMap as TMapConstructor<${typeParams[1]}, ${newType}>`;
-                    break;
-                case 'TSet':
-                    oldValue = `TSet as TSetConstructor<${typeParams[1]}, ${newType}>`;
-                    break;
-                case 'TList':
-                    oldValue = `TList as TListConstructor<${typeParams[1]}, ${newType}>`;
-                    break;
-                default:
-                    throw new CompileError(`Invalid type ${oldValue}`, t.location);
-            }
-        }
         return `
 ${this.jsdoc(t.doc)}
 export type ${newType} = ${oldType};
-export const ${newType} = ${oldValue};
+export const ${newType} = ${oldType};
 `;
     }
 
+    /** 生成结构定义 */
     private struct(s: Struct): string {
         return `
 ${this.jsdoc(s.doc)}
-export class ${s.name.safeName()} extends TStruct {
+export class ${s.name.safeName()} extends $.TStruct {
     constructor(data: {
-${s.fields.map((f) => this.field(f, '        ', true)).join('\n')}
+${s.fields.map((f) => this.fieldCreation(f, '        ')).join('\n')}
     }) {
         super();
 ${s.fields.map((f) => this.fieldInit(f, '        ')).join('\n')}
@@ -338,15 +300,16 @@ ${s.fields.map((f) => this.field(f, '    ')).join('\n')}
 `;
     }
 
+    /** 生成联合定义 */
     private union(u: Union): string {
         const name = u.name.safeName();
-        const baseName = `${name}$$Base`;
+        const baseName = `${name}$Base$`;
         const unionName = (f: Field): string => `${name}$${f.name.safeName()}`;
         return `
 ${this.jsdoc(u.doc)}
-class ${baseName} extends TUnion {
+class ${baseName} extends $.TUnion {
     constructor(data: {
-${u.fields.map((f) => this.field(f, '        ', true)).join('\n')}
+${u.fields.map((f) => this.fieldCreation(f, '        ')).join('\n')}
     }) {
         if (new.target === ${baseName}) {
 ${u.fields
@@ -362,7 +325,7 @@ ${u.fields
         (f) => `${this.jsdoc(f.doc)}
 class ${unionName(f)} extends ${baseName} {
     constructor(data: {
-${this.field(f, '        ', true)}
+${this.fieldCreation(f, '        ')}
     }) {
         super(data);
 ${this.fieldInit(f, '        ')}
@@ -371,28 +334,28 @@ ${this.field(f, '    ')}
 }`,
     )
     .join('\n')}
-    
 ${this.jsdoc(u.doc)}
 export type ${name} = ${u.fields.map(unionName).join(' | ')};
 export const ${name} = ${baseName} as {
 ${u.fields
     .map(
         (f) => `${this.jsdoc(f.doc, '    ')}
-    new (data: TData<typeof ${unionName(f)}>): ${unionName(f)};`,
+    new (data: $.TData<typeof ${unionName(f)}>): ${unionName(f)};`,
     )
     .join('\n')}
-    new (data: TData<typeof ${baseName}>): ${name};
+    new (data: $.TData<typeof ${baseName}>): ${name};
     readonly prototype: ${name};
 };
 `;
     }
 
+    /** 生成异常定义 */
     private exception(e: Exception): string {
         return `
 ${this.jsdoc(e.doc)}
-export class ${e.name.safeName()} extends TException {
+export class ${e.name.safeName()} extends $.TException {
     constructor(data: {
-${e.fields.map((f) => this.field(f, '        ', true)).join('\n')}
+${e.fields.map((f) => this.fieldCreation(f, '        ')).join('\n')}
     }) {
         super();
 ${e.fields.map((f) => this.fieldInit(f, '        ')).join('\n')}
@@ -402,6 +365,7 @@ ${e.fields.map((f) => this.field(f, '    ')).join('\n')}
 `;
     }
 
+    /** 生成方法定义 */
     private method(m: Method, indent: string): string {
         const args = m.params.map((a) => `${a.name.safeName()}: ${this.type(a.type)}`).join(', ');
         let retType = this.type(m.result);
@@ -437,8 +401,9 @@ ${indent}abstract ${m.name.safeName()}(${args}): Promise<${retType}>;
 `;
     }
 
+    /** 生成服务定义 */
     private service(s: Service): string {
-        const base = s.base ? s.base.name : `TService`;
+        const base = s.base ? s.base.name : `$.TService`;
         return `
 ${this.jsdoc(s.doc)}
 export abstract class ${s.name.safeName()} extends ${base} {
@@ -447,6 +412,7 @@ ${s.methods.map((m) => this.method(m, '    ')).join('\n')}
 `;
     }
 
+    /** 生成常量定义 */
     private const(c: Const): string {
         return `
 ${this.jsdoc(c.doc)}
@@ -479,11 +445,11 @@ export const ${c.name.safeName()}: ${this.type(c.type)} = ${this.constValue(c.va
         throw new CompileError(`Unknown definition`, (def as Definition).location);
     }
 
+    /** 生成头部 */
     private banner(): string {
         const comments = [
-            `Autogenerated on ${new Date().toISOString()} with @cloudpss/rpc ${
-                process.env['npm_package_version'] ?? ''
-            }`.trim(),
+            `Autogenerated by @cloudpss/rpc ${pkgJson.version}`,
+            `On ${new Date().toISOString()}`,
             `Do not edit this file manually`,
         ];
         const width = comments.reduce((w, c) => Math.max(w, c.length), 0);
@@ -492,35 +458,16 @@ export const ${c.name.safeName()}: ${this.type(c.type)} = ${this.constValue(c.va
         return `${empty}
 ${comments
     .map((c) => {
-        const r = width - c.length;
-        return `/* ${' '.repeat(r / 2)}${c.padEnd(width - r / 2)} */`;
+        const empty = width - c.length;
+        const left = Math.floor(empty / 2);
+        return `/* ${' '.repeat(left)}${c.padEnd(width - left)} */`;
     })
     .join('\n')}
 ${empty}
+
 /* eslint-disable */
 
-import {
-    TBool,
-    TByte,
-    TI8,
-    TI16,
-    TI32,
-    TI64,
-    TDouble,
-    TString,
-    TBinary,
-    TMap,
-    TMapConstructor,
-    TSet,
-    TSetConstructor,
-    TList,
-    TListConstructor,
-    TData,
-    TException,
-    TStruct,
-    TUnion,
-    TService,
-} from '../dist/types';
+import * as $ from '@cloudpss/rpc/types';
 `;
     }
 
@@ -530,9 +477,31 @@ import {
         for (const h of this.document.headers) {
             this.result += this.header(h);
         }
-        for (const def of this.document.definitions) {
-            if (!(def instanceof Typedef)) continue;
-            this.typedefInit(def);
+        {
+            for (const i of [Enum, Union, Struct, Exception]) {
+                for (const def of this.document.definitions) {
+                    if (!(def instanceof i)) continue;
+                    this.typeNames.set(def.name.safeName(), def);
+                }
+            }
+            const typeDefs = this.document.definitions.filter((def): def is Typedef => def instanceof Typedef);
+            const typeDefCount = typeDefs.length;
+            for (let loop = 0; loop < typeDefCount; loop++) {
+                for (const def of typeDefs.splice(0)) {
+                    const newType = def.name.safeName();
+                    const oldType = this.resolve(def.type);
+                    if (oldType instanceof UNRESOLVED) {
+                        typeDefs.push(def);
+                        continue;
+                    }
+                    this.typeNames.set(newType, oldType);
+                }
+            }
+            for (const def of typeDefs) {
+                const newType = def.name.safeName();
+                const oldType = this.resolve(def.type);
+                this.typeNames.set(newType, oldType);
+            }
         }
         for (const i of [Enum, Union, Struct, Exception, Typedef, Const, Service]) {
             for (const def of this.document.definitions) {

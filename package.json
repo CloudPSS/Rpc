@@ -19,6 +19,9 @@
     ".": "./dist/index.js",
     "./types": "./dist/types.js"
   },
+  "imports": {
+    "#package.json": "./package.json"
+  },
   "types": "dist/index.d.ts",
   "bin": {
     "thrift": "./bin/cli.js"
@@ -46,21 +49,21 @@
     "extends": "@cloudpss"
   },
   "devDependencies": {
-    "@cloudpss/commitlint-config": "^1.1.5",
-    "@cloudpss/eslint-config": "^1.1.5",
-    "@cloudpss/lint-staged-config": "^1.1.5",
-    "@cloudpss/prettier-config": "^1.1.5",
-    "@cloudpss/tsconfig": "^1.1.5",
-    "husky": "^7.0.4",
-    "mkdirp": "^1.0.4",
-    "peggy": "^1.2.0",
-    "rimraf": "^3.0.2",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.6.3",
-    "rpc-legacy": "npm:@cloudpss/rpc@^0.3.4"
+    "@cloudpss/commitlint-config": "^1.2.3",
+    "@cloudpss/eslint-config": "^1.2.3",
+    "@cloudpss/lint-staged-config": "^1.2.3",
+    "@cloudpss/prettier-config": "^1.2.3",
+    "@cloudpss/tsconfig": "^1.2.3",
+    "husky": "^8.0.3",
+    "mkdirp": "^2.1.3",
+    "peggy": "^3.0.0",
+    "rimraf": "^4.1.2",
+    "rpc-legacy": "npm:@cloudpss/rpc@^0.3.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@types/node": ">= 16",
-    "tslib": "^2.3.1"
+    "@types/node": "^18.14.1",
+    "tslib": "^2.5.0"
   }
 }
