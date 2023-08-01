@@ -1,4 +1,4 @@
-import type { ServiceModule } from './interfaces';
+import type { Handler, ServiceModule } from './interfaces';
 
 /**
  * 是否为 object
@@ -24,7 +24,10 @@ export function getClient<T = unknown>(module: ServiceModule<T>, check = true): 
 /**
  * 获取服务 Processor
  */
-export function getProcessor<T = unknown>(module: ServiceModule<T>, check = true): ServiceModule<T>['Processor'] {
+export function getProcessor<T = unknown>(
+    module: ServiceModule<T>,
+    check = true,
+): new (handler: Handler<T>) => unknown {
     let processor = module as ServiceModule<T> & ServiceModule<T>['Processor'];
     while (typeof processor.Processor == 'function') {
         processor = processor.Processor as ServiceModule<T> & ServiceModule<T>['Processor'];
@@ -32,7 +35,7 @@ export function getProcessor<T = unknown>(module: ServiceModule<T>, check = true
     if (check && typeof processor != 'function') {
         throw new Error(`${String(module)} is not a processor`);
     }
-    return processor;
+    return processor as new (handler: Handler<T>) => unknown;
 }
 
 /**

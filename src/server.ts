@@ -1,10 +1,24 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-ignore
+import type { Server } from 'node:net';
+import type { Server as TlsServer, TlsOptions } from 'node:tls';
 import { MultiplexedProcessor, createMultiplexServer } from 'thrift';
 import { isObject, getServiceName, getProcessor } from './utils.js';
-import type { Server } from 'net';
-import type { Server as TlsServer, TlsOptions } from 'tls';
 import type { ServiceModule, Handler, ThriftOptions } from './interfaces.js';
+
+declare module 'thrift' {
+    function createMultiplexServer<THandler>(
+        processor: MultiplexedProcessor,
+        options?: ServerOptions<MultiplexedProcessor, THandler>,
+    ): Server | TlsServer;
+
+    /** @inheritdoc */
+    interface MultiplexedProcessor {
+        /** 已注册的服务 */
+        readonly services: Readonly<Record<string, unknown>>;
+
+        /** 注册服务 */
+        registerProcessor<THandler>(name: string, processor: THandler): void;
+    }
+}
 
 /** 服务端选项 */
 export interface ServerOptions extends ThriftOptions {
@@ -64,11 +78,17 @@ function wrapHandler<T>(
 
             // 设置长度以强制使用回调版本重载
             Object.defineProperty(wrapper, 'length', { value: -1 });
-            wrap[key] = wrapper as typeof wrap[typeof key];
+            wrap[key] = wrapper as (typeof wrap)[typeof key];
         }
     } while ((currentObj = Object.getPrototypeOf(currentObj) as object));
     return wrap;
 }
+
+/** 服务端 */
+type InternalServer = (ThriftServer | ThriftTlsServer) & {
+    _processor: MultiplexedProcessor;
+};
+
 /** 创建服务端 */
 export function createServer(options?: ServerOptions & { tls?: undefined }): ThriftServer;
 /** 创建服务端 */
@@ -76,36 +96,39 @@ export function createServer(options?: ServerOptions & { tls: object }): ThriftT
 /** 创建服务端 */
 export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsServer {
     const multiplex = new MultiplexedProcessor();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const server = createMultiplexServer(multiplex, options) as ThriftServer | ThriftTlsServer;
+    const server = createMultiplexServer(multiplex, options) as InternalServer;
     Object.defineProperty(server, '_processor', { value: multiplex });
     Object.defineProperty(server, 'route', {
         value: function route<TClient>(
-            this: ThriftServer | ThriftTlsServer,
+            this: InternalServer,
             name: string | ServiceModule<TClient>,
-            module: ServiceModule<TClient> | Handler<TClient>,
+            service: ServiceModule<TClient> | Handler<TClient>,
             handler: Handler<TClient> | undefined,
-        ): ThriftServer | ThriftTlsServer {
-            if (!name) {
-                throw new TypeError(`Invalid empty name`);
-            }
+        ): InternalServer {
+            if (!name) throw new TypeError(`Invalid empty name/service`);
+
+            let _name, _service, _handler;
             if (typeof name == 'string') {
                 // OK
+                _name = name;
+                _service = service as ServiceModule<TClient>;
+                if (!handler) throw new TypeError(`Invalid empty handler`);
+                _handler = handler;
             } else if (isObject(name)) {
                 // 第二种签名
-                handler = module as Handler<TClient>;
-                module = name;
-                name = getServiceName(module);
+                _name = getServiceName(name);
+                _service = name;
+                if (!service) throw new TypeError(`Invalid empty handler`);
+                _handler = service as Handler<TClient>;
             } else {
                 throw new TypeError(`Invalid name ${String(name)}, string expected`);
             }
-            // @ts-ignore
-            if (name in multiplex.services) {
-                throw new Error(`Service with name "${name}" already exists`);
+
+            if (_name in multiplex.services) {
+                throw new Error(`Service with name "${_name}" already exists`);
             }
-            const processor = getProcessor(module as ServiceModule<TClient>);
-            // @ts-ignore
-            this._processor.registerProcessor(name, new processor(wrapHandler(handler, processor, this))); // eslint-disable-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            const processor = getProcessor(_service);
+            this._processor.registerProcessor(_name, new processor(wrapHandler(_handler, processor, this)));
             return this;
         },
     });

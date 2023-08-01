@@ -33,13 +33,16 @@ export interface ThriftClient extends Connection {
 
 /** 创建客户端 */
 export function createClient(options?: ClientOptions): ThriftClient {
-    const { host, port, tls, ...opt } = options ?? {};
+    const { host, port, tls, ...opt } = options ?? ({ port: 4000 } satisfies ClientOptions);
     const _host = host ? String(host) : '127.0.0.1';
     const _port = Number.parseInt(String(port ?? '4000'));
     if (!Number.isInteger(_port) || _port <= 0 || _port > 65535) {
         throw new TypeError(`Invalid port rpc ${String(port)}`);
     }
     const _tls = isObject(tls) ? tls : tls ? {} : undefined;
+
+    opt.max_attempts ??= Number.POSITIVE_INFINITY;
+    opt.retry_max_delay ??= 5000;
 
     const connection = (
         _tls ? createSSLConnection(_host, _port, { ...opt, ..._tls }) : createConnection(_host, _port, opt)
