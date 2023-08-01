@@ -20,6 +20,7 @@ bash "$(Resolve-Path -Relative "$PSScriptRoot/build-thrift.sh")".Replace("\", "/
 
 Copy-Item "$PSScriptRoot/temp/thrift" "$PSScriptRoot/../bin/thrift" -Force
 Write-Output "Copy thrift to bin/thrift"
+Remove-Item "$PSScriptRoot/temp" -Force -Recurse
 
 $pkg = Get-Content "$PSScriptRoot/../package.json" | ConvertFrom-Json
 $pkg.dependencies.thrift = "$lateset"
