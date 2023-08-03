@@ -47,6 +47,24 @@ export function createClient(options?: ClientOptions): ThriftClient {
     const connection = (
         _tls ? createSSLConnection(_host, _port, { ...opt, ..._tls }) : createConnection(_host, _port, opt)
     ) as ThriftClient;
+
+    const prefix = `[Thrift RPC ${_tls ? 'tls://' : 'tcp://'}${_host}:${_port}]`;
+    if (options?.debug) {
+        // eslint-disable-next-line no-console
+        connection.on('error', (ex) => console.error(`${prefix} error: ${ex}`));
+        // eslint-disable-next-line no-console
+        connection.on('close', () => console.debug(`${prefix} closed`));
+        connection.on('reconnecting', ({ delay, attempt }) =>
+            // eslint-disable-next-line no-console
+            console.debug(`${prefix} reconnecting in ${delay}ms, attempt ${attempt}`),
+        );
+        // eslint-disable-next-line no-console
+        connection.on('connect', () => console.debug(`${prefix} connected`));
+    } else {
+        // eslint-disable-next-line no-console
+        connection.on('error', (ex) => console.error(`${prefix} error: ${(ex as Error).message}`));
+    }
+
     const multiplexer = new Multiplexer();
     const clients = new Map<string, Client<unknown>>();
     Object.defineProperties(connection, {
