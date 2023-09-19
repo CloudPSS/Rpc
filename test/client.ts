@@ -34,8 +34,8 @@ export async function client(): Promise<void> {
     } catch (ex) {
         console.error('error', ex);
     } finally {
-        console.log('destroy');
-        client.destroy();
+        console.log('end');
+        client.end();
     }
 }
 
