@@ -49,7 +49,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@types/node": "^20.6.2",
+    "@types/node": "^20.6.3",
     "@types/node-int64": "^0.4.29",
     "@types/thrift": "^0.10.14",
     "node-int64": "^0.4.0",
