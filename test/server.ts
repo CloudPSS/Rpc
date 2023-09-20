@@ -5,8 +5,11 @@ import type { ThriftServer } from '../src';
 import { RoomInfo } from './thrift/gen-nodejs/room_types';
 import { setTimeout } from 'timers/promises';
 
-function pppbool(input: boolean): Promise<boolean> {
-    return Promise.resolve(input);
+async function pppbool(input: boolean): Promise<boolean> {
+    console.log('start');
+    await setTimeout(10000);
+    console.log('end');
+    return input;
 }
 
 /** 创建 RPC 服务 */
@@ -55,4 +58,9 @@ export function server(): ThriftServer {
     return s;
 }
 
-server().listen(4000);
+const s = server().listen(4000);
+
+process.on('SIGINT', () => {
+    console.log('xx');
+    s.close();
+});

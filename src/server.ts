@@ -1,4 +1,4 @@
-import type { Server } from 'node:net';
+import type { Server, Socket } from 'node:net';
 import type { Server as TlsServer, TlsOptions } from 'node:tls';
 import { MultiplexedProcessor, createMultiplexServer } from 'thrift';
 import { isObject, getServiceName, getProcessor } from './utils.js';
@@ -46,7 +46,7 @@ export interface ThriftTlsServer extends TlsServer, ThriftServerBase {}
 function wrapHandler<T>(
     handler: Handler<T>,
     processor: ServiceModule<T>['Processor'],
-    server: ThriftServer | ThriftTlsServer,
+    server: InternalServer,
 ): Handler<T> {
     const wrap = {} as Handler<T>;
     // eslint-disable-next-line @typescript-eslint/ban-types
@@ -61,10 +61,13 @@ function wrapHandler<T>(
                 if (typeof args[args.length - 1] === 'function') {
                     const callback = args.pop() as (err: Error | null, result?: unknown) => void;
                     try {
+                        server._beforeCall();
                         const ret = await this[key](...args);
                         callback(null, ret);
                     } catch (ex) {
                         callback(ex as Error);
+                    } finally {
+                        server._afterCall();
                     }
                 } else {
                     // one-way methods
@@ -87,6 +90,12 @@ function wrapHandler<T>(
 /** 服务端 */
 type InternalServer = (ThriftServer | ThriftTlsServer) & {
     _processor: MultiplexedProcessor;
+    _pendingCalls: number;
+    _closing: boolean;
+    /** 调用方法开始 */
+    _beforeCall(): void;
+    /** 调用方法结束 */
+    _afterCall(): void;
 };
 
 /** 创建服务端 */
@@ -97,7 +106,52 @@ export function createServer(options?: ServerOptions & { tls: object }): ThriftT
 export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsServer {
     const multiplex = new MultiplexedProcessor();
     const server = createMultiplexServer(multiplex, options) as InternalServer;
+
+    const connections = new Map<string, Socket>();
+    server.on('connection', (socket: Socket) => {
+        const id = `${socket.remoteAddress}:${socket.remotePort}`;
+        connections.set(id, socket);
+        socket.on('close', () => connections.delete(id));
+    });
+
+    const closeConnections = (): void => {
+        for (const socket of connections.values()) {
+            socket.end();
+        }
+    };
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const _close = server.close;
+    server.close = function close(this: InternalServer, ...args): InternalServer {
+        if (this._closing) {
+            Reflect.apply(_close, this, args);
+            return this;
+        }
+        this._closing = true;
+        Reflect.apply(_close, this, args);
+        if (this._pendingCalls === 0) {
+            closeConnections();
+        }
+        return this;
+    };
     Object.defineProperty(server, '_processor', { value: multiplex });
+    Object.defineProperty(server, '_pendingCalls', { value: 0, writable: true });
+    Object.defineProperty(server, '_closing', { value: false, writable: true });
+    Object.defineProperty(server, '_beforeCall', {
+        value: function (this: InternalServer) {
+            if (this._closing) {
+                throw new Error('Server is closing');
+            }
+            this._pendingCalls++;
+        },
+    });
+    Object.defineProperty(server, '_afterCall', {
+        value: function (this: InternalServer) {
+            this._pendingCalls--;
+            if (this._closing && this._pendingCalls === 0) {
+                closeConnections();
+            }
+        },
+    });
     Object.defineProperty(server, 'route', {
         value: function route<TClient>(
             this: InternalServer,
