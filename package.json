@@ -16,8 +16,7 @@
   "module": "dist/esm/index.js",
   "exports": {
     "import": "./dist/esm/index.js",
-    "require": "./dist/cjs/index.js",
-    "default": "./dist/esm/index.js"
+    "default": "./dist/cjs/index.js"
   },
   "bin": {
     "thrift": "./bin/thrift.js"
