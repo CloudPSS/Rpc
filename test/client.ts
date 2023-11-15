@@ -40,10 +40,11 @@ export async function client(): Promise<void> {
     // }
 
     let index = 0;
-    while (1) {
+    while (index < 10) {
         await setTimeout(1000);
         console.log(index++, await client.get(RoomService).pppbool(true));
     }
+    console.log(client.end());
 }
 
 client();

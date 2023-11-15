@@ -49,7 +49,6 @@ function wrapHandler<T>(
     server: InternalServer,
 ): Handler<T> {
     const wrap = {} as Handler<T>;
-    // eslint-disable-next-line @typescript-eslint/ban-types
     let currentObj = (processor as new () => unknown).prototype as object;
     do {
         // 在原型链上查找 process_* 方法

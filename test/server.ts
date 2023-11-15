@@ -6,9 +6,9 @@ import { RoomInfo } from './thrift/gen-nodejs/room_types';
 import { setTimeout } from 'timers/promises';
 
 async function pppbool(input: boolean): Promise<boolean> {
-    console.log('start');
-    await setTimeout(10000);
-    console.log('end');
+    console.log('pppbool start');
+    await setTimeout(1000);
+    console.log('pppbool end');
     return input;
 }
 
@@ -61,6 +61,6 @@ export function server(): ThriftServer {
 const s = server().listen(4000);
 
 process.on('SIGINT', () => {
-    console.log('xx');
-    s.close();
+    console.log('closing');
+    s.close(() => console.log('closed'));
 });

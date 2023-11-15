@@ -1,8 +1,11 @@
 import type { ConnectionOptions as TlsConnectionOptions } from 'node:tls';
-import type { ConnectOptions, Connection } from 'thrift';
-import { Multiplexer, createConnection, createSSLConnection } from 'thrift';
+import { once } from 'node:events';
+import { debuglog } from 'node:util';
+import { type ConnectOptions, Connection, Multiplexer, createConnection, createSSLConnection } from 'thrift';
 import { isObject, getServiceName, getClient } from './utils.js';
 import type { Client, ServiceModule, ThriftOptions } from './interfaces.js';
+
+const logger = debuglog('cloudpss/rpc');
 
 /** 客户端选项 */
 export interface ClientOptions
@@ -29,6 +32,8 @@ export interface ThriftClient extends Connection {
     get<TClient>(name: string): Client<TClient>;
     /** 查看服务是否存在 */
     has(name: string): boolean;
+    /** 结束 */
+    end(): Promise<void>;
 }
 
 /** 创建客户端 */
@@ -48,21 +53,14 @@ export function createClient(options?: ClientOptions): ThriftClient {
         _tls ? createSSLConnection(_host, _port, { ...opt, ..._tls }) : createConnection(_host, _port, opt)
     ) as ThriftClient;
 
-    const prefix = `[Thrift RPC ${_tls ? 'tls://' : 'tcp://'}${_host}:${_port}]`;
-    if (options?.debug) {
-        // eslint-disable-next-line no-console
-        connection.on('error', (ex) => console.error(`${prefix} error: ${ex}`));
-        // eslint-disable-next-line no-console
-        connection.on('close', () => console.debug(`${prefix} closed`));
+    {
+        const prefix = `[${_tls ? 'tls://' : 'tcp://'}${_host}:${_port}]`;
+        connection.on('error', (ex) => logger(`${prefix} error: ${ex}`));
+        connection.on('close', () => logger(`${prefix} closed`));
         connection.on('reconnecting', ({ delay, attempt }) =>
-            // eslint-disable-next-line no-console
-            console.debug(`${prefix} reconnecting in ${delay}ms, attempt ${attempt}`),
+            logger(`${prefix} reconnecting in ${delay}ms, attempt ${attempt}`),
         );
-        // eslint-disable-next-line no-console
-        connection.on('connect', () => console.debug(`${prefix} connected`));
-    } else {
-        // eslint-disable-next-line no-console
-        connection.on('error', (ex) => console.error(`${prefix} error: ${(ex as Error).message}`));
+        connection.on('connect', () => logger(`${prefix} connected`));
     }
 
     const multiplexer = new Multiplexer();
@@ -102,6 +100,12 @@ export function createClient(options?: ClientOptions): ThriftClient {
         has: {
             value: function (this: ThriftClient, name: string): boolean {
                 return clients.get(name) != null;
+            },
+        },
+        end: {
+            value: async function (this: ThriftClient): Promise<void> {
+                Connection.prototype.end.call(this);
+                await once(this, 'close');
             },
         },
     });
