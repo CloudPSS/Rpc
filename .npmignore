@@ -1,6 +1,3 @@
-.husky/
-.vscode/
-
 /build/
 
 node_modules/
@@ -10,5 +7,5 @@ node_modules/
 /tsconfig.json
 /tsconfig.*.json
 
-/yarn.lock
+/pnpm-lock.yaml
 *.log

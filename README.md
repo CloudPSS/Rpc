@@ -5,7 +5,7 @@
 用于 CloudPSS 内部微服务的 RPC 框架，简单封装了 Apache Thrift。
 
 ```bash
-yarn add @cloudpss/rpc
+pnpm add @cloudpss/rpc
 ```
 
 ## 使用
@@ -15,7 +15,7 @@ yarn add @cloudpss/rpc
 - 创建 thrift IDL 文件（如：`rpc/my-service.thrift`）
 - 运行 `thrift` 命令生成 JS/TS 接口
   ```bash
-  yarn thrift -r --gen js:ts,es6,node -out ./src/thrift
+  pnpm thrift -r --gen js:ts,es6,node -out ./src/thrift
   ```
 
 ### 服务端
@@ -58,18 +58,18 @@ client.destroy();
 ### 初始化本地环境
 
 ```bash
-yarn install
+pnpm install
 ```
 
 ### 调试
 
 ```bash
-yarn start
+pnpm start
 ```
 
 ### 发布
 
 ```bash
-yarn version
+pnpm version
 npm publish
 ```
