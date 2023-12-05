@@ -1,68 +1,60 @@
-import type { TransportReader, TransportWriter } from '../transport/interface';
-import type {
-    Double,
-    FieldHeader,
-    I16,
-    I32,
-    I64,
-    I8,
-    ListHeader,
-    MapHeader,
-    MessageHeader,
-    MessageType,
-    SetHeader,
-    StructHeader,
-    TType,
-} from '../types';
+import type { Transform } from 'node:stream';
+import { type FrameData, FrameEnd } from '../transport/interface.js';
+import type { Double, Bool, I16, I32, I64, I8, MessageType, TType, UUID } from '../types.js';
 
-export interface ProtocolReader {
-    readMessageBegin(): MessageHeader;
-    readMessageEnd(): void;
-    readStructBegin(): StructHeader;
-    readStructEnd(): void;
-    readFieldBegin(): FieldHeader | null;
-    readFieldEnd(): void;
-    readMapBegin(): MapHeader;
-    readMapEnd(): void;
-    readListBegin(): ListHeader;
-    readListEnd(): void;
-    readSetBegin(): SetHeader;
-    readSetEnd(): void;
-    readBool(): boolean;
-    readI8(): I8;
-    readI16(): I16;
-    readI32(): I32;
-    readI64(): I64;
-    readDouble(): Double;
-    readString(): string;
-    readBinary(): Uint8Array;
-}
+export type { FrameData };
+export { FrameEnd };
 
-export interface ProtocolWriter {
-    writeMessageBegin(name: string, type: MessageType, seqId: I32): void;
-    writeMessageEnd(): void;
-    writeStructBegin(name: string): void;
-    writeStructEnd(): void;
-    writeFieldBegin(name: string, type: TType, id: I32): void;
-    writeFieldEnd(): void;
-    writeMapBegin(keyType: TType, valType: TType, size: I32): void;
-    writeMapEnd(): void;
-    writeListBegin(elementType: TType, size: I32): void;
-    writeListEnd(): void;
-    writeSetBegin(elementType: TType, size: I32): void;
-    writeSetEnd(): void;
-    writeBool(value: boolean): void;
-    writeI8(value: I8): void;
-    writeI16(value: I16): void;
-    writeI32(value: I32): void;
-    writeI64(value: I64): void;
-    writeDouble(value: Double): void;
-    writeString(value: string): void;
-    writeBinary(value: Uint8Array): void;
-}
+/** Raw values */
+export type RawValue =
+    | Bool
+    | I8
+    // eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+    | I16
+    // eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+    | I32
+    | I64
+    // eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+    | Double
+    | Uint8Array
+    | RawStruct
+    | RawList
+    | RawMap
+    | UUID;
+
+/** Raw field data */
+export type RawField = [id: number, name: string, type: TType, value: RawValue];
+/** Raw struct data */
+export type RawStruct = [name: string, fields: RawField[]];
+/** Raw list data */
+export type RawList = [elementType: TType, elements: RawValue[]];
+/** Raw map data */
+export type RawMap = [keyType: TType, valueType: TType, keys: RawValue[], values: RawValue[]];
+
+/** Raw message data */
+export type RawMessage = [
+    /** the message type */
+    type: MessageType,
+    /** the sequence id */
+    seq: number,
+    /** the method name */
+    name: string,
+    /** message data */
+    data: RawStruct,
+];
+
+/** Read data from underlying transport, consume {@link FrameData}, generate {@link RawMessage} */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ProtocolReader extends Transform {}
+
+/** Write data to underlying stream, consume {@link RawMessage}, generate {@link FrameData} */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ProtocolWriter extends Transform {}
 
 /** Protocol */
 export interface Protocol {
-    createReader(reader: TransportReader): ProtocolReader;
-    createWriter(writer: TransportWriter): ProtocolWriter;
+    /** Create protocol reader */
+    createReader(): ProtocolReader;
+    /** Create protocol writer */
+    createWriter(): ProtocolWriter;
 }

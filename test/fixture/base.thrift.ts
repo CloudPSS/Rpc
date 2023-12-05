@@ -8,10 +8,8 @@
 
 import * as $ from '@cloudpss/rpc/types';
 
-
 class bb$Base$ extends $.TUnion {
     constructor(data: {
-
         a?: $.TData<xx>;
 
         b?: $.TData<$.TI8>;
@@ -26,34 +24,25 @@ class bb$Base$ extends $.TUnion {
 }
 
 class bb$a extends bb$Base$ {
-    constructor(data: {
-
-        a?: $.TData<xx>;
-    }) {
+    constructor(data: { a?: $.TData<xx> }) {
         super(data);
-        if (data.a != null)
-            this.a = xx.from(data.a);
-     }
+        if (data.a != null) this.a = xx.from(data.a);
+    }
 
     a?: xx;
 }
 
 class bb$b extends bb$Base$ {
-    constructor(data: {
-
-        b?: $.TData<$.TI8>;
-    }) {
+    constructor(data: { b?: $.TData<$.TI8> }) {
         super(data);
-        if (data.b != null)
-            this.b = $.TI8(data.b);
-     }
+        if (data.b != null) this.b = $.TI8(data.b);
+    }
 
     b?: $.TI8;
 }
 
 export type bb = bb$a | bb$b;
 export const bb = bb$Base$ as {
-
     new (data: $.TData<typeof bb$a>): bb$a;
 
     new (data: $.TData<typeof bb$b>): bb$b;
@@ -61,52 +50,41 @@ export const bb = bb$Base$ as {
     readonly prototype: bb;
 };
 
-
 export class aa extends $.TStruct {
-    constructor(data: {
-
-        a?: $.TData<$.TByte>;
-    }) {
+    constructor(data: { a?: $.TData<$.TByte> }) {
         super();
-        if (data.a != null)
-            this.a = $.TByte(data.a);
+        if (data.a != null) this.a = $.TByte(data.a);
     }
 
     a?: $.TByte;
 }
 
-
 export class cc extends $.TException {
-    constructor(data: {
-
-    }) {
+    constructor(data: {}) {
         super();
-
     }
-
 }
-
 
 export type xx = $.TList<aa>;
 export const xx = $.TList<aa>;
 
-
 export type sm = $.TMap<$.TI8, $.TString>;
 export const sm = $.TMap<$.TI8, $.TString>;
 
-
 export const a: $.TI8 = $.TI8(12);
-
 
 export const x: sm = new sm([[a, $.TString(1)]]);
 
-
 export const b: bb = new bb({
-    a: [new aa({
-    a: $.TByte(1),
-}), new aa({
-    a: $.TByte(2),
-}), new aa({
-    a: $.TByte(3),
-})],
+    a: [
+        new aa({
+            a: $.TByte(1),
+        }),
+        new aa({
+            a: $.TByte(2),
+        }),
+        new aa({
+            a: $.TByte(3),
+        }),
+    ],
 });

@@ -1,5 +1,5 @@
 import type { LocationRange } from 'peggy';
-import { inspect, InspectOptionsStylized } from 'node:util';
+import { inspect, type InspectOptionsStylized } from 'node:util';
 import { inspectDoc } from './utils.js';
 import { Literal, Token, type FieldType, type Identifier } from './token.js';
 
@@ -40,7 +40,10 @@ export class ConstValue extends Token {
         return value;
     }
 
-    constructor(location: LocationRange, readonly value: ConstData) {
+    constructor(
+        location: LocationRange,
+        readonly value: ConstData,
+    ) {
         super(location);
         this.value = ConstValue.unwrap(value);
     }
@@ -127,7 +130,12 @@ export class Enum extends Token {
 }
 
 export class StructLike extends Token {
-    constructor(location: LocationRange, readonly name: Identifier, readonly fields: Field[], readonly doc?: string) {
+    constructor(
+        location: LocationRange,
+        readonly name: Identifier,
+        readonly fields: Field[],
+        readonly doc?: string,
+    ) {
         super(location);
         name.assertNoDot();
     }
@@ -188,7 +196,12 @@ export class Method extends Token {
 }
 
 export class Typedef extends Token {
-    constructor(location: LocationRange, readonly name: Identifier, readonly type: FieldType, readonly doc?: string) {
+    constructor(
+        location: LocationRange,
+        readonly name: Identifier,
+        readonly type: FieldType,
+        readonly doc?: string,
+    ) {
         super(location);
         name.assertNoDot();
     }

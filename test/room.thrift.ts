@@ -15,7 +15,6 @@ import {
     TString,
     TBinary,
     TMap,
-    TMapConstructor,
     TSet,
     TSetConstructor,
     TList,
@@ -25,7 +24,7 @@ import {
     TStruct,
     TUnion,
     TService,
-} from '../dist/types';
+} from '../dist/types.js';
 
 /** From ./base.thrift */
 import * as base from './base.thrift.js';
@@ -179,8 +178,8 @@ export class RoomNotFoundException extends TException {
 }
 
 export type $null = TMap<TString, TBinary>;
-export const $null = TMap as TMapConstructor<TString, TBinary, $null>;
-
+export const $null = TMap<TString, TBinary>;
+const x = new $null();
 export type aa = base.aa;
 export const aa = base.aa;
 

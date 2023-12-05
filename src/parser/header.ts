@@ -7,7 +7,10 @@ import { isJsIdentifier } from '../util.js';
 
 /** Base class for include and cpp_include */
 class IncludeBase extends Token {
-    constructor(location: LocationRange, readonly path: Literal) {
+    constructor(
+        location: LocationRange,
+        readonly path: Literal,
+    ) {
         super(location);
     }
     /** @inheritdoc */
@@ -34,7 +37,11 @@ export class CppInclude extends IncludeBase {}
 
 /** namespace directive */
 export class Namespace extends Token {
-    constructor(location: LocationRange, readonly scope: string, readonly namespace: Identifier) {
+    constructor(
+        location: LocationRange,
+        readonly scope: string,
+        readonly namespace: Identifier,
+    ) {
         super(location);
         namespace.assertNoDot();
     }

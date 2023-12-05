@@ -1,5 +1,6 @@
-import type { ProtocolWriter } from '../protocol/interface';
-import { I32, MessageType, TType } from '../types';
+import type { RawMessage } from '../protocol/interface.js';
+import { MessageType, type I32, TType } from '../types.js';
+import { decode, encode } from '../utils/string.js';
 
 export enum ApplicationExceptionType {
     /** used in case the type from the peer is unknown. */
@@ -21,19 +22,36 @@ export enum ApplicationExceptionType {
     unsupportedClientType = 10,
 }
 
+/** {@link MessageType.exception} is used for other exceptions. That is: when the service method throws an exception that is not declared in the Thrift IDL file, or some other part of the Thrift stack throws an exception. For example when the server could not encode or decode a message or struct. */
 export class ApplicationException extends Error {
-    constructor(readonly type: ApplicationExceptionType, message: string) {
+    constructor(
+        readonly type: ApplicationExceptionType,
+        message: string,
+    ) {
         super(message);
     }
 
-    /** Write an error message */
-    static writeErrorMessage(
-        writer: ProtocolWriter,
+    /** Create an exception from {@link RawMessage} */
+    static fromExceptionMessage(message: RawMessage): ApplicationException {
+        const [type, , , data] = message;
+        if (type !== MessageType.exception) {
+            throw new Error('Invalid message type');
+        }
+        const [, fields] = data;
+        const messageField = fields.find((field) => field[0] === 1);
+        const typeField = fields.find((field) => field[0] === 2);
+        const msg = decode(messageField?.[3] as Uint8Array, '');
+        const t = (typeField?.[3] as ApplicationExceptionType) ?? ApplicationExceptionType.unknown;
+        return new ApplicationException(t, msg);
+    }
+
+    /** Create a message with type {@link MessageType.exception} */
+    static toExceptionMessage(
         name: string,
         seqId: I32,
         error: unknown,
         type: ApplicationExceptionType = ApplicationExceptionType.internalError,
-    ): void {
+    ): RawMessage {
         let message: string;
         if (error instanceof Error) {
             message = error.message;
@@ -43,15 +61,17 @@ export class ApplicationException extends Error {
         } else {
             message = String(error);
         }
-        writer.writeMessageBegin(name, MessageType.exception, seqId);
-        writer.writeStructBegin('TApplicationException');
-        writer.writeFieldBegin('message', TType.binary, 1);
-        writer.writeString(message);
-        writer.writeFieldEnd();
-        writer.writeFieldBegin('type', TType.i32, 2);
-        writer.writeI32(type);
-        writer.writeFieldEnd();
-        writer.writeStructEnd();
-        writer.writeMessageEnd();
+        return [
+            MessageType.exception,
+            seqId,
+            name,
+            [
+                'TApplicationException',
+                [
+                    [1, 'message', TType.binary, encode(message)],
+                    [2, 'type', TType.i32, type],
+                ],
+            ],
+        ];
     }
 }

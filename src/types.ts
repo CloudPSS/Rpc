@@ -71,7 +71,7 @@ export function TBinary(value: Uint8Array | ArrayBuffer | string): TBinary {
     if (value instanceof ArrayBuffer) {
         return new Uint8Array(value);
     }
-    if (Buffer.isBuffer(value)) {
+    if (typeof Buffer == 'function' && Buffer.isBuffer(value)) {
         return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
     }
     if (typeof value === 'string') {
@@ -84,13 +84,6 @@ export function TBinary(value: Uint8Array | ArrayBuffer | string): TBinary {
 export type TMap<K, V> = Map<K, V>;
 /** Thrift map */
 export const TMap = Map;
-/** Thrift map constructor */
-export type TMapConstructor<K, V, T extends TMap<K, V>> = {
-    new (): T;
-    new (iterable?: Iterable<readonly [K, V]> | null): T;
-} & {
-    [k in keyof typeof TMap]: (typeof TMap)[k];
-};
 
 /** Thrift set */
 export type TSet<K> = Set<K>;
@@ -106,14 +99,16 @@ export const TList = Array;
 export type TData<T> = T extends abstract new (data: infer U) => unknown
     ? U
     : T extends (data: infer U) => unknown
-    ? U
-    : T extends Set<infer K>
-    ? T | Iterable<TData<K>>
-    : T extends Map<infer K, infer V>
-    ? T | Iterable<readonly [TData<K>, TData<V>]>
-    : T extends Array<infer V>
-    ? T | Iterable<TData<V>> | ArrayLike<TData<V>>
-    : T;
+      ? U
+      : T extends Set<infer K>
+        ? T | Iterable<TData<K>>
+        : T extends Map<infer K, infer V>
+          ? T | Iterable<readonly [TData<K>, TData<V>]>
+          : T extends Array<infer V>
+            ? T | Iterable<TData<V>> | ArrayLike<TData<V>>
+            : T;
+
+export type TDeserializer<T> = Iterator<undefined, T, Uint8Array>;
 
 /** Base class for thrift exceptions */
 export abstract class TException extends Error {
@@ -130,7 +125,7 @@ export abstract class TException extends Error {
     /**
      * 反序列化，由子类实现
      */
-    static deserialize(data: Uint8Array): TException {
+    static deserialize(): TDeserializer<TException> {
         throw new Error('Not implemented');
     }
 }
@@ -146,7 +141,7 @@ export abstract class TStruct {
     /**
      * 反序列化，由子类实现
      */
-    static deserialize(data: TStruct): TException {
+    static deserialize(): TDeserializer<TStruct> {
         throw new Error('Not implemented');
     }
 }
@@ -162,7 +157,7 @@ export abstract class TUnion {
     /**
      * 反序列化，由子类实现
      */
-    static deserialize(data: TUnion): TException {
+    static deserialize(): TDeserializer<TUnion> {
         throw new Error('Not implemented');
     }
 }

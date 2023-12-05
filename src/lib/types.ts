@@ -17,19 +17,21 @@ export type I64 = bigint;
 export type Double = number;
 
 export type List<T> = T[];
-
+/** An UUID */
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 export enum TType {
-    bool,
-    i8,
-    i16,
-    i32,
-    i64,
-    double,
-    binary,
-    struct,
-    map,
-    set,
-    list,
+    bool = 2,
+    i8 = 3,
+    i16 = 6,
+    i32 = 8,
+    i64 = 10,
+    double = 4,
+    binary = 11,
+    struct = 12,
+    map = 13,
+    set = 14,
+    list = 15,
+    uuid = 16,
 }
 
 /** Map types to TType */
@@ -51,36 +53,4 @@ export enum MessageType {
     reply = 2,
     exception = 3,
     oneway = 4,
-}
-
-export interface MessageHeader {
-    name: string;
-    type: MessageType;
-    seqId: I32;
-}
-
-export interface StructHeader {
-    name: string;
-}
-
-export interface FieldHeader {
-    name: string;
-    type: TType;
-    id: I16;
-}
-
-export interface MapHeader {
-    keyType: TType;
-    valueType: TType;
-    size: I32;
-}
-
-export interface ListHeader {
-    elementType: TType;
-    size: I32;
-}
-
-export interface SetHeader {
-    elementType: TType;
-    size: I32;
 }

@@ -2,4 +2,4 @@ root: true
 extends: '@cloudpss'
 env:
   node: true
-  es2021: true
+  es2022: true

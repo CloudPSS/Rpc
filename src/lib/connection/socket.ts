@@ -1,4 +1,4 @@
-import { createServer, createConnection, Server, Socket } from 'net';
+import { createServer, createConnection, Server, Socket } from 'node:net';
 
 export function createSocketServer(): Server {
     const server = createServer((socket) => {

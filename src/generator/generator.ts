@@ -2,7 +2,7 @@ import path from 'node:path';
 import {
     Const,
     ConstValue,
-    Definition,
+    type Definition,
     Enum,
     EnumValue,
     Exception,
@@ -14,8 +14,8 @@ import {
     Union,
 } from '../parser/definition.js';
 import type { Document } from '../parser/document.js';
-import { CppInclude, Header, Include, Namespace } from '../parser/header.js';
-import { BaseType, ContainerType, FieldType, Identifier, Token } from '../parser/token.js';
+import { CppInclude, type Header, Include, Namespace } from '../parser/header.js';
+import { BaseType, ContainerType, type FieldType, Identifier, Token } from '../parser/token.js';
 import { CompileError } from './errors.js';
 import { isJsIdentifier } from '../util.js';
 import pkgJson from '#package.json' assert { type: 'json' };

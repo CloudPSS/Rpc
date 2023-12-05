@@ -1,27 +1,22 @@
-import type { U8 } from '../types';
+import type { Duplex } from 'node:stream';
 
-export interface TransportReader {
-    ready(size?: number): Promise<void>;
-    read(size: number): Buffer;
-    readByte(): U8;
-    peek(size: number): Buffer;
-    peekByte(): U8;
-    peekAll(): Buffer;
-    skip(size: number): void;
-    /** Called by protocol when finished read a message */
-    end(): void;
-    destroy(): void;
-}
+export const FrameEnd = Symbol('FrameEnd');
+/** Indicates end of a frame */
+export type FrameEnd = typeof FrameEnd;
+/** An encoded message */
+export type FrameData = Buffer | FrameEnd;
 
-export interface TransportWriter {
-    write(data: Uint8Array): void;
-    writeByte(data: U8): void;
-    /** Called by protocol when finished write a message */
-    end(): void;
-    destroy(): void;
-}
+/**
+ * Read data from underlying stream, generate {@link FrameData} (MAY or MAY NOT includes {@link FrameEnd})
+ * Write data to underlying stream, consume {@link FrameData} (INCLUDES {@link FrameEnd})
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface TransportStream extends Duplex {}
 
+/** Underlying transport */
 export interface Transport {
-    createReader(readable: NodeJS.ReadableStream): TransportReader;
-    createWriter(writable: NodeJS.WritableStream): TransportWriter;
+    /** connect to server */
+    connect(): Promise<TransportStream>;
+    /** listen for client */
+    listen(onConnect: (stream: TransportStream) => void): Promise<() => Promise<void>>;
 }

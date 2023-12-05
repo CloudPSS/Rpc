@@ -5,7 +5,10 @@ import { SyntaxError } from './thrift-idl.g.js';
 
 /** Thrift IDL document */
 export class Document {
-    constructor(readonly headers: Header[], readonly definitions: Definition[]) {}
+    constructor(
+        readonly headers: Header[],
+        readonly definitions: Definition[],
+    ) {}
     /** Original text of document */
     text!: string;
     /** Path of document */

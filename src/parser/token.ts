@@ -1,5 +1,5 @@
 import type { LocationRange } from 'peggy';
-import { inspect, InspectOptionsStylized } from 'node:util';
+import { inspect, type InspectOptionsStylized } from 'node:util';
 import { KEYWORDS } from '../constants.js';
 import { SyntaxError } from './thrift-idl.g.js';
 import { JS_RESERVED } from '../util.js';
@@ -13,7 +13,10 @@ export abstract class Token {
 
 /** Identifier */
 export class Identifier extends Token {
-    constructor(location: LocationRange, readonly name: string) {
+    constructor(
+        location: LocationRange,
+        readonly name: string,
+    ) {
         super(location);
         if (KEYWORDS.includes(name)) {
             throw new SyntaxError(`Identifier "${name}" is a reserved keyword`, null, name, location);
@@ -58,7 +61,10 @@ export type FieldType = BaseType | ContainerType | Identifier;
 
 /** BaseType */
 export class BaseType extends Token {
-    constructor(location: LocationRange, readonly name: string) {
+    constructor(
+        location: LocationRange,
+        readonly name: string,
+    ) {
         super(location);
     }
     /** @inheritdoc */
@@ -69,7 +75,11 @@ export class BaseType extends Token {
 
 /** ContainerType */
 export class ContainerType extends Token {
-    constructor(location: LocationRange, readonly name: string, readonly types: FieldType[]) {
+    constructor(
+        location: LocationRange,
+        readonly name: string,
+        readonly types: FieldType[],
+    ) {
         super(location);
     }
     /** @inheritdoc */
