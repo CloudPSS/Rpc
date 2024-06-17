@@ -32,7 +32,7 @@
     "test:build": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && pnpm format",
     "test:server": "NODE_DEBUG=cloudpss/rpc ts-node ./test/server.ts",
     "test:client": "NODE_DEBUG=cloudpss/rpc ts-node ./test/client.ts",
-    "prepare": "husky install || echo Failed to initialize husky",
+    "prepare": "husky || echo Failed to initialize husky",
     "format": "prettier --cache --cache-strategy content --ignore-path .gitignore --write .",
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content --ext .js,.ts ."
   },
@@ -41,23 +41,23 @@
     "extends": "@cloudpss"
   },
   "devDependencies": {
-    "@cloudpss/commitlint-config": "^2.0.0",
-    "@cloudpss/eslint-config": "^2.0.0",
-    "@cloudpss/lint-staged-config": "^2.0.0",
-    "@cloudpss/prettier-config": "^2.0.0",
-    "@cloudpss/tsconfig": "^2.0.0",
-    "husky": "^8.0.3",
+    "@cloudpss/commitlint-config": "^2.1.1",
+    "@cloudpss/eslint-config": "^2.1.1",
+    "@cloudpss/lint-staged-config": "^2.1.1",
+    "@cloudpss/prettier-config": "^2.1.1",
+    "@cloudpss/tsconfig": "^2.1.1",
+    "husky": "^9.0.11",
     "mkdirp": "^3.0.1",
-    "rimraf": "^5.0.5",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "rimraf": "^5.0.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@types/node": "^20.9.0",
+    "@types/node": "^20.14.2",
     "@types/node-int64": "^0.4.32",
     "@types/thrift": "^0.10.17",
     "node-int64": "^0.4.0",
-    "thrift": "0.19.0",
-    "tslib": "^2.6.2"
+    "thrift": "0.20.0",
+    "tslib": "^2.6.3"
   }
 }
