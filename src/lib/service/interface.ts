@@ -46,21 +46,21 @@ type InType<T> = T extends StructSerializer<infer U, any> ? U : never;
 type OutType<T> = T extends StructSerializer<any, infer U> ? U : never;
 
 /** infer method */
-type HandlerMethodOf<T extends MethodSerializer<any, any>> = T extends MethodSerializer<infer Args, infer Returns>
-    ? (...args: OutType<Args>) => InType<Returns> extends [infer R] ? R | PromiseLike<R> : never
-    : never;
+type HandlerMethodOf<T extends MethodSerializer<any, any>> =
+    T extends MethodSerializer<infer Args, infer Returns>
+        ? (...args: OutType<Args>) => InType<Returns> extends [infer R] ? R | PromiseLike<R> : never
+        : never;
 
 /** infer method */
-type ProcessorMethodOf<T extends MethodSerializer<any, any>> = T extends MethodSerializer<infer Args, infer Returns>
-    ? (...args: InType<Args>) => OutType<Returns> extends [infer R] ? R | PromiseLike<R> : never
-    : never;
+type ProcessorMethodOf<T extends MethodSerializer<any, any>> =
+    T extends MethodSerializer<infer Args, infer Returns>
+        ? (...args: InType<Args>) => OutType<Returns> extends [infer R] ? R | PromiseLike<R> : never
+        : never;
 
 /** handler object for service */
-export type Handler<T extends Service<any> = Service<any>> = T extends Service<infer U>
-    ? { readonly [P in keyof U]: HandlerMethodOf<U[P]> }
-    : never;
+export type Handler<T extends Service<any> = Service<any>> =
+    T extends Service<infer U> ? { readonly [P in keyof U]: HandlerMethodOf<U[P]> } : never;
 
 /** processor object for service */
-export type Processor<T extends Service<any> = Service<any>> = T extends Service<infer U>
-    ? { readonly [P in keyof U]: ProcessorMethodOf<U[P]> }
-    : never;
+export type Processor<T extends Service<any> = Service<any>> =
+    T extends Service<infer U> ? { readonly [P in keyof U]: ProcessorMethodOf<U[P]> } : never;
