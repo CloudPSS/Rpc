@@ -61,6 +61,12 @@ client.destroy();
 pnpm install
 ```
 
+### 更新 thrift binary
+
+```pwsh
+./build/upgrade-bin.ps1
+```
+
 ### 调试
 
 ```bash
@@ -70,6 +76,6 @@ pnpm start
 ### 发布
 
 ```bash
-pnpm version
-npm publish
+pnpm version <patch|minor|major>
+pnpm publish --registry https://registry.npmjs.org
 ```
