@@ -1,7 +1,7 @@
 {
   "name": "@cloudpss/rpc",
   "description": "Rpc used in cloudpss, a simple shim of apache thrift",
-  "version": "0.3.12",
+  "version": "0.4.0",
   "author": "CloudPSS",
   "license": "MIT",
   "engines": {
