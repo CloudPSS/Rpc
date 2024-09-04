@@ -4,6 +4,7 @@ import { debuglog } from 'node:util';
 import { type ConnectOptions, Connection, Multiplexer, createConnection, createSSLConnection } from 'thrift';
 import { isObject, getServiceName, getClient } from './utils.js';
 import type { Client, ServiceModule, ThriftOptions } from './interfaces.js';
+import { DEFAULT_PROTOCOL, DEFAULT_TRANSPORT } from './options.js';
 
 const logger = debuglog('cloudpss/rpc');
 
@@ -24,6 +25,7 @@ export interface ThriftClient extends Connection {
     /** 添加或获取一个服务 */
     get<TClient>(service: ServiceModule<TClient>): Client<TClient>;
     /** 添加或获取一个服务 */
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
     get<TClient>(name: string, service: ServiceModule<TClient>): Client<TClient>;
     /**
      * 获取一个服务
@@ -33,6 +35,7 @@ export interface ThriftClient extends Connection {
     /** 查看服务是否存在 */
     has(name: string): boolean;
     /** 结束 */
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     end(): Promise<void>;
 }
 
@@ -48,6 +51,8 @@ export function createClient(options?: ClientOptions): ThriftClient {
 
     opt.max_attempts ??= Number.POSITIVE_INFINITY;
     opt.retry_max_delay ??= 5000;
+    opt.transport ??= DEFAULT_TRANSPORT;
+    opt.protocol ??= DEFAULT_PROTOCOL;
 
     const connection = (
         _tls ? createSSLConnection(_host, _port, { ...opt, ..._tls }) : createConnection(_host, _port, opt)

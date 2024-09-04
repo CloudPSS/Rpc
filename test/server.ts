@@ -1,10 +1,11 @@
-import RoomService from './thrift/gen-nodejs/RoomService';
-import * as RoomService2 from './thrift/gen-nodejs/RoomService2';
-import { createServer } from '../dist/cjs/index';
-import type { ThriftServer } from '../src';
-import { RoomInfo } from './thrift/gen-nodejs/room_types';
-import { setTimeout } from 'timers/promises';
+import RoomService from './thrift/gen-nodejs/RoomService.js';
+import * as RoomService2 from './thrift/gen-nodejs/RoomService2.js';
+import { createServer } from '../dist/index.js';
+import type { ThriftServer } from '../src/index.js';
+import { RoomInfo } from './thrift/gen-nodejs/room_types.js';
+import { setTimeout } from 'node:timers/promises';
 
+/** pppbool */
 async function pppbool(input: boolean): Promise<boolean> {
     console.log('pppbool start');
     await setTimeout(1000);

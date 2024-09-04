@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
-const { spawn } = require('child_process');
-const path = require('path');
-const { chmodSync } = require('fs');
+import { spawn } from 'child_process';
+import { dirname, resolve } from 'path';
+import { chmodSync } from 'fs';
+import { fileURLToPath } from 'url';
 
-const executable =
-    process.platform !== 'win32' ? path.resolve(__dirname, 'thrift') : path.resolve(__dirname, 'thrift.exe');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const executable = process.platform !== 'win32' ? resolve(__dirname, 'thrift') : resolve(__dirname, 'thrift.exe');
 chmodSync(executable, '755');
 
 const args = process.argv.slice(2);

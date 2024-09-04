@@ -1,4 +1,4 @@
-import type { Handler, ServiceModule } from './interfaces';
+import type { Handler, ServiceModule } from './interfaces.js';
 
 /**
  * 是否为 object

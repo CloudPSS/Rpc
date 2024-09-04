@@ -3,6 +3,7 @@ import type { Server as TlsServer, TlsOptions } from 'node:tls';
 import { MultiplexedProcessor, createMultiplexServer } from 'thrift';
 import { isObject, getServiceName, getProcessor } from './utils.js';
 import type { ServiceModule, Handler, ThriftOptions } from './interfaces.js';
+import { DEFAULT_TRANSPORT, DEFAULT_PROTOCOL } from './options.js';
 
 declare module 'thrift' {
     function createMultiplexServer<THandler>(
@@ -57,7 +58,7 @@ function wrapHandler<T>(
 
             const key = processorKey.slice('process_'.length) as keyof typeof handler;
             const wrapper = async function (this: typeof handler, ...args: unknown[]) {
-                if (typeof args[args.length - 1] === 'function') {
+                if (typeof args.at(-1) === 'function') {
                     const callback = args.pop() as (err: Error | null, result?: unknown) => void;
                     try {
                         server._beforeCall();
@@ -103,8 +104,12 @@ export function createServer(options?: ServerOptions & { tls?: undefined }): Thr
 export function createServer(options?: ServerOptions & { tls: object }): ThriftTlsServer;
 /** 创建服务端 */
 export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsServer {
+    const { ...opt } = options ?? {};
+    opt.transport ??= DEFAULT_TRANSPORT;
+    opt.protocol ??= DEFAULT_PROTOCOL;
+
     const multiplex = new MultiplexedProcessor();
-    const server = createMultiplexServer(multiplex, options) as InternalServer;
+    const server = createMultiplexServer(multiplex, opt) as InternalServer;
 
     const connections = new Map<string, Socket>();
     server.on('connection', (socket: Socket) => {
