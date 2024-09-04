@@ -1,5 +1,0 @@
-root: true
-extends: '@cloudpss'
-env:
-  node: true
-  es2020: true
