@@ -17,6 +17,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+nohup.out
 
 # OS
 .DS_Store
@@ -24,6 +25,8 @@ lerna-debug.log*
 # Tests
 coverage/
 .nyc_output/
+.eslint-report/
+*.cpuprofile
 
 # IDEs and editors
 /.idea
