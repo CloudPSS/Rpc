@@ -32,6 +32,9 @@ TFramedTransport.receiver = function (callback, seqid) {
             }
             // get single package sieze
             const frameSize = binary.readI32(chunks[0], 0);
+            if (frameSize < 0) {
+                throw new Error('Read a negative frame size (' + frameSize + ')');
+            }
             // Not enough bytes to continue, save and resume on next packet
             if (length < 4 + frameSize) {
                 return;

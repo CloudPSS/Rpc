@@ -1,4 +1,5 @@
 import type { Server, Socket } from 'node:net';
+import { debuglog, type DebugLoggerFunction } from 'node:util';
 import type { Server as TlsServer, TlsOptions } from 'node:tls';
 import { MultiplexedProcessor, createMultiplexServer } from 'thrift';
 import { isObject, getServiceName, getProcessor } from './utils.js';
@@ -48,6 +49,7 @@ function wrapHandler<T>(
     handler: Handler<T>,
     processor: ServiceModule<T>['Processor'],
     server: InternalServer,
+    logger: DebugLoggerFunction,
 ): Handler<T> {
     const wrap = {} as Handler<T>;
     let currentObj = (processor as new () => unknown).prototype as object;
@@ -61,10 +63,13 @@ function wrapHandler<T>(
                 if (typeof args.at(-1) === 'function') {
                     const callback = args.pop() as (err: Error | null, result?: unknown) => void;
                     try {
+                        logger('calling method %s', key);
                         server._beforeCall();
                         const ret = await this[key](...args);
                         callback(null, ret);
+                        logger('method %s called', key);
                     } catch (ex) {
+                        logger('method %s error: %s', key, ex);
                         callback(ex as Error);
                     } finally {
                         server._afterCall();
@@ -72,8 +77,11 @@ function wrapHandler<T>(
                 } else {
                     // one-way methods
                     try {
+                        logger('calling one-way method %s', key);
                         await this[key](...args);
+                        logger('one-way method %s called', key);
                     } catch (ex) {
+                        logger('one-way method %s error: %s', key, ex);
                         server.emit('error', ex);
                     }
                 }
@@ -82,6 +90,7 @@ function wrapHandler<T>(
             // 设置长度以强制使用回调版本重载
             Object.defineProperty(wrapper, 'length', { value: -1 });
             wrap[key] = wrapper as (typeof wrap)[typeof key];
+            logger('registered method %s', key);
         }
     } while ((currentObj = Object.getPrototypeOf(currentObj) as object));
     return wrap;
@@ -104,6 +113,7 @@ export function createServer(options?: ServerOptions & { tls?: undefined }): Thr
 export function createServer(options?: ServerOptions & { tls: object }): ThriftTlsServer;
 /** 创建服务端 */
 export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsServer {
+    let logger: DebugLoggerFunction = debuglog(`cloudpss/rpc-server`, (l) => (logger = l));
     const { ...opt } = options ?? {};
     opt.transport ??= DEFAULT_TRANSPORT;
     opt.protocol ??= DEFAULT_PROTOCOL;
@@ -115,7 +125,14 @@ export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsS
     server.on('connection', (socket: Socket) => {
         const id = `${socket.remoteAddress}:${socket.remotePort}`;
         connections.set(id, socket);
-        socket.on('close', () => connections.delete(id));
+        logger('[%s] connected', id);
+        socket.on('error', (ex) => {
+            logger('[%s] error: %s', id, ex);
+        });
+        socket.on('close', () => {
+            connections.delete(id);
+            logger('[%s] closed', id);
+        });
     });
 
     const closeConnections = (): void => {
@@ -186,7 +203,7 @@ export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsS
                 throw new Error(`Service with name "${_name}" already exists`);
             }
             const processor = getProcessor(_service);
-            this._processor.registerProcessor(_name, new processor(wrapHandler(_handler, processor, this)));
+            this._processor.registerProcessor(_name, new processor(wrapHandler(_handler, processor, this, logger)));
             return this;
         },
     });
