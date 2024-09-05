@@ -135,7 +135,20 @@ export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsS
         });
     });
 
+    server.on('error', (ex) => {
+        logger('error: %s', ex);
+    });
+
+    server.on('listening', () => {
+        logger('listening on %o', server.address());
+    });
+
+    server.on('close', () => {
+        logger('closed');
+    });
+
     const closeConnections = (): void => {
+        logger('closing all connections');
         for (const socket of connections.values()) {
             socket.end();
         }
@@ -143,6 +156,7 @@ export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsS
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const _close = server.close;
     server.close = function close(this: InternalServer, ...args): InternalServer {
+        logger('close called, %d pending rpc calls', this._pendingCalls);
         if (this._closing) {
             Reflect.apply(_close, this, args);
             return this;
