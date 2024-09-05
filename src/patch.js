@@ -21,6 +21,11 @@ TFramedTransport.receiver = function (callback, seqid) {
     let chunks = [];
     let length = 0;
 
+    /**
+     * receive data from socket
+     * @this {import('node:net').Socket}
+     * @param {Buffer} data
+     */
     return function (data) {
         chunks.push(data);
         length += data.byteLength;
@@ -33,7 +38,8 @@ TFramedTransport.receiver = function (callback, seqid) {
             // get single package sieze
             const frameSize = binary.readI32(chunks[0], 0);
             if (frameSize < 0) {
-                throw new Error('Read a negative frame size (' + frameSize + ')');
+                this.emit('error', new Error('Read a negative frame size (' + frameSize + ')'));
+                return;
             }
             // Not enough bytes to continue, save and resume on next packet
             if (length < 4 + frameSize) {
