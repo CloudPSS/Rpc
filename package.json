@@ -38,31 +38,31 @@
     "test:build": "mkdirp ./test/thrift && thrift -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && pnpm format",
     "test:server": "node --watch --enable-source-maps ./test/server.js",
     "test:client": "node --watch --enable-source-maps ./test/client.js",
-    "prepare": "husky install || echo Failed to initialize husky",
+    "prepare": "husky || echo Failed to initialize husky",
     "format": "prettier --cache --cache-strategy content --ignore-path .gitignore --write .",
-    "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content --ext .js,.ts,.jsx,.tsx,.vue ."
+    "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content"
   },
   "prettier": "@cloudpss/prettier-config",
   "commitlint": {
     "extends": "@cloudpss"
   },
   "devDependencies": {
-    "@cloudpss/commitlint-config": "^2.1.1",
-    "@cloudpss/eslint-config": "^2.1.1",
-    "@cloudpss/lint-staged-config": "^2.1.1",
-    "@cloudpss/prettier-config": "^2.1.1",
-    "@cloudpss/tsconfig": "^2.1.1",
-    "husky": "^9.0.11",
+    "@cloudpss/commitlint-config": "^3.0.8",
+    "@cloudpss/eslint-config": "^3.0.8",
+    "@cloudpss/lint-staged-config": "^3.0.8",
+    "@cloudpss/prettier-config": "^3.0.8",
+    "@cloudpss/tsconfig": "^3.0.8",
+    "husky": "^9.1.5",
     "mkdirp": "^3.0.1",
     "node-int64": "^0.4.0",
-    "peggy": "^4.0.2",
-    "rimraf": "^5.0.7",
-    "rpc-legacy": "npm:@cloudpss/rpc@^0.3.10",
+    "peggy": "^4.0.3",
+    "rimraf": "^6.0.1",
+    "rpc-legacy": "npm:@cloudpss/rpc@^0.4.3",
     "thrift": "^0.20.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@types/node": "^20.14.2"
+    "@types/node": "^22.5.4"
   }
 }
