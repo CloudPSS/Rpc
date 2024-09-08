@@ -1,24 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable jsdoc/require-jsdoc */
+export type { UUID } from '@cloudpss/id';
 
-/** A boolean value (true or false) */
-export type Bool = boolean;
-/** An 8-bit unsigned integer */
-export type U8 = number;
-/** An 8-bit signed integer */
-export type I8 = number;
-/** A 16-bit signed integer */
-export type I16 = number;
-/** A 32-bit signed integer */
-export type I32 = number;
-/** A 64-bit signed integer */
-export type I64 = bigint;
-/** A 64-bit floating point number */
-export type Double = number;
-
-export type List<T> = T[];
-/** An UUID */
-export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 export enum TType {
     bool = 2,
     i8 = 3,
@@ -36,15 +17,25 @@ export enum TType {
 
 /** Map types to TType */
 export interface TTypeMap {
-    [TType.bool]: Bool;
-    [TType.i8]: I8;
-    [TType.i16]: I16;
-    [TType.i32]: I32;
-    [TType.i64]: I64;
-    [TType.double]: Double;
-    [TType.binary]: string | Buffer;
-    [TType.list]: List<TType>;
+    /** boolean */
+    [TType.bool]: boolean;
+    /** 8-bit integer */
+    [TType.i8]: number;
+    /** 16-bit integer */
+    [TType.i16]: number;
+    /** 32-bit integer */
+    [TType.i32]: number;
+    /** 64-bit integer */
+    [TType.i64]: bigint;
+    /** double */
+    [TType.double]: number;
+    /** binary */
+    [TType.binary]: string | Uint8Array;
+    /** list */
+    [TType.list]: TType[];
+    /** map */
     [TType.map]: Map<TType, TType>;
+    /** set */
     [TType.set]: Set<TType>;
 }
 

@@ -63,6 +63,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@cloudpss/id": "^0.5.40",
     "@types/node": "^22.5.4"
   }
 }

@@ -1,524 +1,260 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { Transform, type TransformCallback } from 'node:stream';
+import { serializeUUID, deserializeUUIDInto } from '@cloudpss/id';
 import { ApplicationException, ApplicationExceptionType } from '../error/application-exception.js';
-import { MessageType, TType, type I8, type UUID } from '../types.js';
+import type { MessageType, UUID } from '../types.js';
 import { decode, encode } from '../utils/string.js';
 import {
+    ProtocolReader,
+    ProtocolWriter,
     type Protocol,
-    type ProtocolReader,
-    type ProtocolWriter,
-    type RawList,
-    type RawMap,
-    type RawMessage,
-    type RawStruct,
-    FrameEnd,
-    type RawValue,
-    type RawField,
-    type FrameData,
+    type MessageHeader,
+    type FieldHeader,
+    type StructHeader,
+    type MapHeader,
+    type ListHeader,
+    CHUNK_SIZE,
 } from './interface.js';
 
 const VERSION_1 = 0x8001;
 const VERSION_MASK = 0x7fff;
+const VERSION_TYPE_MASK = 0x8000;
 const STOP_FIELD = 0;
 
-const TTypeToFieldType: Record<TType, I8> = {
-    [TType.bool]: 2,
-    [TType.i8]: 3,
-    [TType.double]: 4,
-    [TType.i16]: 6,
-    [TType.i32]: 8,
-    [TType.i64]: 10,
-    [TType.binary]: 11,
-    [TType.struct]: 12,
-    [TType.map]: 13,
-    [TType.set]: 14,
-    [TType.list]: 15,
-    [TType.uuid]: 16,
-};
-
-const FieldTypeToTType: Record<I8, TType> = {
-    [2]: TType.bool,
-    [3]: TType.i8,
-    [4]: TType.double,
-    [6]: TType.i16,
-    [8]: TType.i32,
-    [10]: TType.i64,
-    [11]: TType.binary,
-    [12]: TType.struct,
-    [13]: TType.map,
-    [14]: TType.set,
-    [15]: TType.list,
-    [16]: TType.uuid,
-};
-
-/** yield [kConsume, size] => read and consume size byte buffer & returns Buffer(size) */
-const kConsume = Symbol('consume');
-/** yield [kPeek, size] => read size byte buffer & returns Buffer(size) */
-const kPeek = Symbol('peek');
-/** yield [kSkip, size] => skip size byte buffer & returns Buffer(0) */
-const kSkip = Symbol('skip');
-/** Request for buffer */
-type BufferRequest = [action: typeof kConsume | typeof kPeek | typeof kSkip, size: number];
-/** Buffer consumer */
-type BufferConsumer<T> = Generator<BufferRequest, T, Buffer>;
-const EMPTY_BUFFER = Buffer.allocUnsafe(0);
-
 /** BinaryProtocolReader */
-class BinaryProtocolReader extends Transform implements ProtocolReader {
-    constructor(readonly strict: boolean) {
-        super({ readableObjectMode: true, writableObjectMode: true });
-        this.reset();
-    }
-    protected pending!: BufferRequest;
-    protected running!: BufferConsumer<never>;
-    /** buffered data */
-    protected readonly buffer: FrameData[] = [];
-    /** unread bytes in buffer, sum of {@link buffer} length */
-    protected bufferUnread = 0;
-    /** reset reader status */
-    protected reset(): void {
-        this.running = this.run();
-        this.pending = this.running.next().value;
-    }
-    /** Ensures buffer[0] has at least `size` bytes */
-    protected ensure(size: number): Buffer | undefined {
-        if (size <= 0) return EMPTY_BUFFER;
-        if (this.bufferUnread < size) {
-            throw new ApplicationException(ApplicationExceptionType.protocolError, 'Buffer underflow');
-        }
-        const buf0 = this.buffer[0];
-        if (!ArrayBuffer.isView(buf0)) {
-            // bad status, reset reader
-            this.buffer.shift();
-            this.reset();
-            return;
-        }
-        if (buf0.byteLength >= size) {
-            return buf0;
-        }
-        const buf = [buf0];
-        let len = buf0.byteLength;
-        for (let i = 1; i < this.buffer.length; i++) {
-            const next = this.buffer[i];
-            if (!ArrayBuffer.isView(next)) {
-                // bad status, reset reader
-                this.buffer.splice(0, i + 1);
-                this.reset();
-                return;
-            }
-            buf.push(next);
-            len += next.byteLength;
-            if (len >= size) {
-                const ret = Buffer.concat(buf);
-                this.buffer.splice(0, i + 1, ret);
-                return ret;
-            }
-        }
-        throw new ApplicationException(ApplicationExceptionType.protocolError, 'Buffer underflow');
-    }
+class BinaryProtocolReader extends ProtocolReader {
     /** @inheritdoc */
-    override _transform(chunk: FrameData, encoding: BufferEncoding, callback: TransformCallback): void {
-        try {
-            this.buffer.push(chunk);
-            if (ArrayBuffer.isView(chunk)) {
-                this.bufferUnread += chunk.byteLength;
-            }
-            while (this.bufferUnread >= this.pending[1]) {
-                const [type, size] = this.pending;
-                if (size <= 0) {
-                    this.pending = this.running.next(EMPTY_BUFFER).value;
-                    continue;
-                }
-                switch (type) {
-                    case kConsume: {
-                        const buffer = this.ensure(size);
-                        if (!buffer) continue;
-                        this.bufferUnread -= size;
-                        this.buffer[0] = buffer.subarray(size);
-                        this.pending = this.running.next(buffer.subarray(0, size)).value;
-                        break;
-                    }
-                    case kPeek: {
-                        const buffer = this.ensure(size);
-                        if (!buffer) continue;
-                        this.pending = this.running.next(buffer.subarray(0, size)).value;
-                        break;
-                    }
-                    case kSkip: {
-                        const buffer = this.ensure(size);
-                        if (!buffer) continue;
-                        this.bufferUnread -= size;
-                        this.buffer[0] = buffer.subarray(size);
-                        this.pending = this.running.next(EMPTY_BUFFER).value;
-                        break;
-                    }
-                    default:
-                        throw new ApplicationException(
-                            ApplicationExceptionType.protocolError,
-                            `Invalid request type: ${String(type)}`,
-                        );
-                }
-            }
-        } catch (e) {
-            callback(e as Error);
-            return;
-        }
-        callback();
-    }
-    /** @inheritdoc */
-    override _flush(callback: TransformCallback): void {
-        this.reset();
-        callback();
-    }
-    /** read message */
-    protected *run(): BufferConsumer<never> {
-        while (true) {
-            const ret = yield* this.readMessage();
-            this.push(ret);
-        }
-    }
-    /** get reader for type */
-    protected reader(type: TType): (this: this) => BufferConsumer<RawValue> {
-        switch (type) {
-            case TType.bool:
-                return this.readBool;
-            case TType.i8:
-                return this.readI8;
-            case TType.i16:
-                return this.readI16;
-            case TType.i32:
-                return this.readI32;
-            case TType.i64:
-                return this.readI64;
-            case TType.double:
-                return this.readDouble;
-            case TType.binary:
-                return this.readBinary;
-            case TType.struct:
-                return this.readStruct;
-            case TType.map:
-                return this.readMap;
-            case TType.set:
-            case TType.list:
-                return this.readList;
-            case TType.uuid:
-                return this.readUuid;
-            default:
-                throw new ApplicationException(
-                    ApplicationExceptionType.protocolError,
-                    `Invalid type: ${String(type satisfies never)}`,
-                );
-        }
-    }
-    /** read message */
-    protected *readMessage(): BufferConsumer<RawMessage> {
-        const buf = yield [kPeek, 4];
-        let name: string;
-        let type: MessageType;
-        let seqId: number;
-        if (buf[0] & 0x80) {
-            // version >= 1
-            const version = buf.readUInt16BE(0) & VERSION_MASK;
-            if (version !== 1) {
-                throw new ApplicationException(
-                    ApplicationExceptionType.invalidProtocol,
-                    `Unsupported binary protocol version: ${version}`,
-                );
-            }
-            type = buf[3] as MessageType;
-            yield [kSkip, 4];
-            name = yield* this.readString();
-            seqId = yield* this.readI32();
-        } else {
+    readMessageHeader(): MessageHeader {
+        this.ensureData(4);
+        const versionData = this.view.getUint16(this.position);
+        if (!(versionData & VERSION_TYPE_MASK)) {
             // version == 0
-            if (this.strict) {
-                throw new ApplicationException(
-                    ApplicationExceptionType.invalidProtocol,
-                    'Unsupported binary protocol version: 0',
-                );
-            }
-            name = yield* this.readString();
-            type = yield* this.readI8();
-            seqId = yield* this.readI32();
+            throw new ApplicationException(
+                ApplicationExceptionType.invalidProtocol,
+                'Unsupported binary protocol version: 0',
+            );
         }
-        const struct = yield* this.readStruct();
-        return [type, seqId, name, struct];
-    }
-    /** read message */
-    protected *readStruct(): BufferConsumer<RawStruct> {
-        const fields: RawField[] = [];
-        while (true) {
-            const type = (yield [kConsume, 1])[0];
-            if (type === STOP_FIELD) {
-                break;
-            }
-            const tType = FieldTypeToTType[type];
-            const id = yield* this.readI16();
-            const value = yield* this.reader(tType).call(this);
-            fields.push([id, '', tType, value]);
+        const version = versionData & VERSION_MASK;
+        if (version !== 1) {
+            throw new ApplicationException(
+                ApplicationExceptionType.invalidProtocol,
+                `Unsupported binary protocol version: ${version}`,
+            );
         }
-        return ['', fields];
+        const type = this.data[this.position + 3] as MessageType;
+        this.position += 4;
+        const name = this.readString();
+        const seq = this.readI32();
+        return [type, seq, name];
     }
-    /** read message */
-    protected *readMap(): BufferConsumer<RawMap> {
-        const buf = yield [kConsume, 6];
-        const keyType = FieldTypeToTType[buf[0]];
-        const valueType = FieldTypeToTType[buf[1]];
-        const size = buf.readInt32BE(2);
-        const keys: RawValue[] = [];
-        const values: RawValue[] = [];
-        const keyReader = this.reader(keyType);
-        const valueReader = this.reader(valueType);
-        for (let i = 0; i < size; i++) {
-            keys.push(yield* keyReader.call(this));
-            values.push(yield* valueReader.call(this));
-        }
-        return [keyType, valueType, keys, values];
+    /** Do nothing in binary protocol */
+    readStructHeader(): StructHeader {
+        this.ensureData(1);
+        return [''];
     }
-    /** read message */
-    protected *readList(): BufferConsumer<RawList> {
-        const buf = yield [kConsume, 5];
-        const elementType = FieldTypeToTType[buf[0]];
-        const size = buf.readInt32BE(1);
-        const elements: RawValue[] = [];
-        const reader = this.reader(elementType);
-        for (let i = 0; i < size; i++) {
-            elements.push(yield* reader.call(this));
-        }
-        return [elementType, elements];
+    /** @inheritdoc */
+    readFieldHeader(): FieldHeader | undefined {
+        this.ensureData(1);
+        const type = this.data[this.position++]!;
+        if (type === STOP_FIELD) return undefined;
+        const id = this.readI16();
+        return [id, '', type];
     }
-    /** read message */
-    protected *readBool(): BufferConsumer<boolean> {
-        const buf = yield [kConsume, 1];
-        return buf[0] !== 0;
+    /** @inheritdoc */
+    readMapHeader(): MapHeader {
+        this.ensureData(6);
+        const keyType = this.data[this.position++]!;
+        const valueType = this.data[this.position++]!;
+        const size = this.readI32();
+        return [keyType, valueType, size];
     }
-    /** read message */
-    protected *readI8(): BufferConsumer<number> {
-        const buf = yield [kConsume, 1];
-        return buf.readInt8(0);
+    /** @inheritdoc */
+    readListHeader(): ListHeader {
+        this.ensureData(5);
+        const elementType = this.data[this.position++]!;
+        const size = this.readI32();
+        return [elementType, size];
     }
-    /** read message */
-    protected *readI16(): BufferConsumer<number> {
-        const buf = yield [kConsume, 2];
-        return buf.readInt16BE(0);
+    /** @inheritdoc */
+    readBool(): boolean {
+        this.ensureData(1);
+        const byte = this.data[this.position]!;
+        this.position += 1;
+        return !!byte;
     }
-    /** read message */
-    protected *readI32(): BufferConsumer<number> {
-        const buf = yield [kConsume, 4];
-        return buf.readInt32BE(0);
+    /** @inheritdoc */
+    readI8(): number {
+        this.ensureData(1);
+        const value = this.view.getInt8(this.position);
+        this.position += 1;
+        return value;
     }
-    /** read message */
-    protected *readI64(): BufferConsumer<bigint> {
-        const buf = yield [kConsume, 8];
-        return buf.readBigInt64BE(0);
+    /** @inheritdoc */
+    readI16(): number {
+        this.ensureData(2);
+        const value = this.view.getInt16(this.position);
+        this.position += 2;
+        return value;
     }
-    /** read message */
-    protected *readDouble(): BufferConsumer<number> {
-        const buf = yield [kConsume, 8];
-        return buf.readDoubleBE(0);
+    /** @inheritdoc */
+    readI32(): number {
+        this.ensureData(4);
+        const value = this.view.getInt32(this.position);
+        this.position += 4;
+        return value;
     }
-    /** read message */
-    protected *readString(): BufferConsumer<string> {
-        const buf = yield* this.readBinary();
+    /** @inheritdoc */
+    readI64(): bigint {
+        this.ensureData(8);
+        const value = this.view.getBigInt64(this.position);
+        this.position += 8;
+        return value;
+    }
+    /** @inheritdoc */
+    readDouble(): number {
+        this.ensureData(8);
+        const value = this.view.getFloat64(this.position);
+        this.position += 8;
+        return value;
+    }
+    /** @inheritdoc */
+    readString(): string {
+        const buf = this.readBinary();
         return decode(buf);
     }
-    /** read message */
-    protected *readBinary(): BufferConsumer<Uint8Array> {
-        const len = yield* this.readI32();
+    /** @inheritdoc */
+    readBinary(): Uint8Array {
+        const len = this.readI32();
         if (len < 0) {
             throw new ApplicationException(ApplicationExceptionType.protocolError, 'Negative binary length');
         }
-        const buf = yield [kConsume, len];
+        this.ensureData(len);
+        const buf = this.data.subarray(this.position, this.position + len);
+        this.position += len;
         return buf;
     }
-    /** read message */
-    protected *readUuid(): BufferConsumer<UUID> {
+    /** @inheritdoc */
+    readUuid(): UUID {
         // UUID in big endian
-        const buf = yield [kConsume, 16];
-        return [
-            buf.toString('hex', 0, 4),
-            buf.toString('hex', 4, 6),
-            buf.toString('hex', 6, 8),
-            buf.toString('hex', 8, 10),
-            buf.toString('hex', 10, 16),
-        ].join('-') as UUID;
+        this.ensureData(16);
+        const uuid = serializeUUID(this.data, this.position);
+        this.position += 16;
+        return uuid;
     }
 }
 
 /** BinaryProtocolWriter */
-class BinaryProtocolWriter extends Transform implements ProtocolWriter {
-    constructor(readonly strict: boolean) {
-        super({ readableObjectMode: true, writableObjectMode: true });
+class BinaryProtocolWriter extends ProtocolWriter {
+    /** @inheritdoc */
+    writeMessageBegin(value: MessageHeader): void {
+        const [type, seq, name] = value;
+        this.ensureCapacity(8 + name.length);
+        this.view.setUint16(this.position, VERSION_1);
+        this.position += 3;
+        this.writeI8(type);
+        this.writeString(name);
+        this.writeI32(seq);
     }
     /** @inheritdoc */
-    override _transform(chunk: RawMessage, _: BufferEncoding, callback: TransformCallback): void {
-        try {
-            const [type, seq, name, data] = chunk;
-            if (this.strict) {
-                this.writeU16(VERSION_1);
-                this.writeByte(0);
-                this.writeI8(type);
-                this.writeString(name);
-                this.writeI32(seq);
-            } else {
-                this.writeString(name);
-                this.writeI8(type);
-                this.writeI32(seq);
-            }
-            this.writeStruct(data);
-            this.write(FrameEnd);
-        } catch (e) {
-            callback(e as Error);
-            return;
-        }
-        callback();
+    writeMessageEnd(): void {
+        this.done();
     }
-    /** get writer for type */
-    protected writer(type: TType): (this: this, value: never) => void {
-        switch (type) {
-            case TType.bool:
-                return this.writeBool;
-            case TType.i8:
-                return this.writeI8;
-            case TType.i16:
-                return this.writeI16;
-            case TType.i32:
-                return this.writeI32;
-            case TType.i64:
-                return this.writeI64;
-            case TType.double:
-                return this.writeDouble;
-            case TType.binary:
-                return this.writeBinary;
-            case TType.struct:
-                return this.writeStruct;
-            case TType.map:
-                return this.writeMap;
-            case TType.set:
-            case TType.list:
-                return this.writeList;
-            case TType.uuid:
-                return this.writeUuid;
-            default: {
-                throw new ApplicationException(
-                    ApplicationExceptionType.protocolError,
-                    `Invalid type: ${String(type satisfies never)}`,
-                );
-            }
-        }
+    /** Do nothing in binary protocol */
+    writeStructBegin(value: StructHeader): void {
+        // do nothing
     }
-    /** write message */
-    protected writeStruct(value: RawStruct): void {
-        const [, fields] = value;
-        for (const [id, , type, value] of fields) {
-            this.writeByte(TTypeToFieldType[type]);
-            this.writeI16(id);
-            const writer = this.writer(type);
-            writer.call(this, value as never);
-        }
-        this.writeByte(STOP_FIELD);
+    /** @inheritdoc */
+    writeStructEnd(): void {
+        this.ensureCapacity(1);
+        this.data[this.position++] = STOP_FIELD;
     }
-    /** write message */
-    protected writeMap(value: RawMap): void {
-        const [keyType, valueType, keys, values] = value;
-        this.writeByte(TTypeToFieldType[keyType]);
-        this.writeByte(TTypeToFieldType[valueType]);
-        this.writeI32(keys.length);
-        const keyWriter = this.writer(keyType);
-        const valueWriter = this.writer(valueType);
-        for (let i = 0; i < keys.length; i++) {
-            keyWriter.call(this, keys[i] as never);
-            valueWriter.call(this, values[i] as never);
-        }
+    /** @inheritdoc */
+    writeMapBegin(value: MapHeader): void {
+        const [keyType, valueType, size] = value;
+        this.ensureCapacity(6);
+        this.data[this.position++] = keyType;
+        this.data[this.position++] = valueType;
+        this.writeI32(size);
     }
-    /** write message */
-    protected writeList(value: RawList): void {
-        const [elemType, elements] = value;
-        this.writeByte(TTypeToFieldType[elemType]);
-        this.writeI32(elements.length);
-        const writer = this.writer(elemType);
-        for (const element of elements) {
-            writer.call(this, element as never);
-        }
+    /** Do nothing in binary protocol */
+    writeMapEnd(): void {
+        // do nothing
     }
-    /** write message */
-    protected writeBool(value: boolean): void {
-        this.writeByte(value ? 1 : 0);
+    /** @inheritdoc */
+    writeListBegin(value: ListHeader): void {
+        const [elemType, size] = value;
+        this.ensureCapacity(5);
+        this.data[this.position++] = elemType;
+        this.writeI32(size);
     }
-    /** write message */
-    protected writeI8(value: number): void {
-        this.writeByte(value);
+    /** Do nothing in binary protocol */
+    writeListEnd(): void {
+        // do nothing
     }
-    /** write message */
-    protected writeI16(value: number): void {
-        const buf = Buffer.allocUnsafe(2);
-        buf.writeInt16BE(value, 0);
-        this.write(buf);
+    /** @inheritdoc */
+    writeBool(value: boolean): void {
+        this.ensureCapacity(1);
+        this.data[this.position++] = value ? 1 : 0;
     }
-    /** write message */
-    protected writeU16(value: number): void {
-        const buf = Buffer.allocUnsafe(2);
-        buf.writeUInt16BE(value, 0);
-        this.write(buf);
+    /** @inheritdoc */
+    writeI8(value: number): void {
+        this.ensureCapacity(1);
+        this.view.setInt8(this.position, value);
+        this.position += 1;
     }
-    /** write message */
-    protected writeI32(value: number): void {
-        const buf = Buffer.allocUnsafe(4);
-        buf.writeInt32BE(value, 0);
-        this.write(buf);
+    /** @inheritdoc */
+    writeI16(value: number): void {
+        this.ensureCapacity(2);
+        this.view.setInt16(this.position, value);
+        this.position += 2;
     }
-    /** write message */
-    protected writeI64(value: bigint): void {
-        const buf = Buffer.allocUnsafe(8);
-        buf.writeBigInt64BE(value, 0);
-        this.write(buf);
+    /** @inheritdoc */
+    writeI32(value: number): void {
+        this.ensureCapacity(4);
+        this.view.setInt32(this.position, value);
+        this.position += 4;
     }
-    /** write message */
-    protected writeDouble(value: number): void {
-        const buf = Buffer.allocUnsafe(8);
-        buf.writeDoubleBE(value, 0);
-        this.write(buf);
+    /** @inheritdoc */
+    writeI64(value: bigint): void {
+        this.ensureCapacity(8);
+        this.view.setBigInt64(this.position, value);
+        this.position += 8;
     }
-    /** write message */
-    protected writeString(value: string): void {
+    /** @inheritdoc */
+    writeDouble(value: number): void {
+        this.ensureCapacity(8);
+        this.view.setFloat64(this.position, value);
+        this.position += 8;
+    }
+    /** @inheritdoc */
+    writeString(value: string): void {
         this.writeBinary(encode(value));
     }
-    /** write message */
-    protected writeBinary(value: Uint8Array): void {
-        this.writeI32(value.length);
-        this.write(value);
+    /** @inheritdoc */
+    writeBinary(value: Uint8Array): void {
+        const size = value.byteLength;
+        this.writeI32(size);
+        if (size > CHUNK_SIZE) {
+            this.send(value);
+        } else {
+            this.ensureCapacity(size);
+            this.data.set(value, this.position);
+            this.position += size;
+        }
     }
-    /** write message */
-    protected writeByte(byte: number): void {
-        this.write(Buffer.from([byte]));
-    }
-    /** write message */
-    protected writeUuid(uuid: UUID): void {
-        const [a, b, c, d, e] = uuid.split('-');
-        const buf = Buffer.allocUnsafe(16);
-        buf.write(a, 0, 4, 'hex');
-        buf.write(b, 4, 2, 'hex');
-        buf.write(c, 6, 2, 'hex');
-        buf.write(d, 8, 2, 'hex');
-        buf.write(e, 10, 6, 'hex');
-        this.write(buf);
+    /** @inheritdoc */
+    writeUuid(uuid: UUID): void {
+        this.ensureCapacity(16);
+        deserializeUUIDInto(uuid, this.data, this.position);
+        this.position += 16;
     }
 }
 
 /** Binary protocol */
-export class BinaryProtocol implements Protocol {
-    constructor(
-        readonly strictRead = false,
-        readonly strictWrite = true,
-    ) {}
-    /** @inheritdoc */
-    createReader(): BinaryProtocolReader {
-        return new BinaryProtocolReader(this.strictRead);
-    }
-    /** @inheritdoc */
-    createWriter(): BinaryProtocolWriter {
-        return new BinaryProtocolWriter(this.strictWrite);
-    }
-
-    static readonly default = new BinaryProtocol();
-}
+export const BinaryProtocol: Protocol = Object.freeze<Protocol>({
+    name: 'binary',
+    createReader(data) {
+        return new BinaryProtocolReader(data);
+    },
+    createWriter(callback) {
+        return new BinaryProtocolWriter(callback);
+    },
+});

@@ -7,6 +7,9 @@ settings:
 importers:
   .:
     dependencies:
+      '@cloudpss/id':
+        specifier: ^0.5.40
+        version: 0.5.40
       '@types/node':
         specifier: ^22.5.4
         version: 22.5.4
@@ -77,6 +80,10 @@ packages:
   '@cloudpss/eslint-config@3.0.8':
     resolution:
       { integrity: sha512-anfAqcAVl8OjGCpW1F8QIP+Jeix8KTFq1WqYZ99zEvPtGmrpAs1p1OT4xdbfGqL8J150++Z6aYtATQiFBZ5XtA== }
+
+  '@cloudpss/id@0.5.40':
+    resolution:
+      { integrity: sha512-8gTQuw4LH4gNjVhWMonf3tHXpXJ4uuCA/uyzThwPk7D1ietTdo+o4tw1Gg8qNRnV8YgR58M97084YTipsBxYHw== }
 
   '@cloudpss/lint-staged-config@3.0.8':
     resolution:
@@ -1884,6 +1891,8 @@ snapshots:
       - jiti
       - supports-color
       - typescript
+
+  '@cloudpss/id@0.5.40': {}
 
   '@cloudpss/lint-staged-config@3.0.8(jiti@1.21.6)':
     dependencies:
