@@ -1,9 +1,12 @@
 /build/
+/test/
 
 node_modules/
 
 /.*
 /*.config.js
+/*.config.mjs
+/*.config.cjs
 /tsconfig.json
 /tsconfig.*.json
 
