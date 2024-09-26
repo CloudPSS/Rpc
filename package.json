@@ -52,7 +52,9 @@
   "dependencies": {
     "@types/node": "^22.7.2",
     "@types/node-int64": "^0.4.32",
-    "@types/thrift": "^0.10.17",
+    "@types/thrift": "^0.10.17"
+  },
+  "peerDependencies": {
     "node-int64": "^0.4.0",
     "thrift": "0.21.0"
   }
