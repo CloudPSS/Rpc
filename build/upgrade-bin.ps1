@@ -29,7 +29,7 @@ New-Item "$PSScriptRoot/temp" -Type Directory | Out-Null
 Invoke-WebRequest "https://dlcdn.apache.org/thrift/$lateset/thrift-$lateset.tar.gz" -OutFile "$PSScriptRoot/temp/thrift.tar.gz"
 Write-Output "Downloaded thrift-$lateset.tar.gz to build/temp/thrift.tar.gz"
 
-docker run --rm -v "$PSScriptRoot/:/app" --workdir "/app" buildpack-deps:18.04 ./build-thrift.sh
+docker run --rm -v "$PSScriptRoot/:/app" --workdir "/app" buildpack-deps:20.04 ./build-thrift.sh
 
 Copy-Item "$PSScriptRoot/temp/thrift" "$PSScriptRoot/../bin/thrift" -Force
 Write-Output "Copy thrift to bin/thrift"
