@@ -38,19 +38,19 @@
     "extends": "@cloudpss"
   },
   "devDependencies": {
-    "@cloudpss/commitlint-config": "^3.0.24",
-    "@cloudpss/eslint-config": "^3.0.24",
-    "@cloudpss/lint-staged-config": "^3.0.24",
-    "@cloudpss/prettier-config": "^3.0.24",
-    "@cloudpss/tsconfig": "^3.0.24",
+    "@cloudpss/commitlint-config": "^3.0.32",
+    "@cloudpss/eslint-config": "^3.0.32",
+    "@cloudpss/lint-staged-config": "^3.0.32",
+    "@cloudpss/prettier-config": "^3.0.32",
+    "@cloudpss/tsconfig": "^3.0.32",
     "husky": "^9.1.7",
     "mkdirp": "^3.0.1",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@types/node": "^24.1.0",
+    "@types/node": "^25.0.3",
     "@types/node-int64": "^0.4.32",
     "@types/thrift": "^0.10.17"
   },

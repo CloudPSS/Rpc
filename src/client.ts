@@ -8,7 +8,8 @@ import { DEFAULT_PROTOCOL, DEFAULT_TRANSPORT } from './options.js';
 
 /** 客户端选项 */
 export interface ClientOptions
-    extends ThriftOptions,
+    extends
+        ThriftOptions,
         Pick<ConnectOptions, 'debug' | 'max_attempts' | 'retry_max_delay' | 'connect_timeout' | 'timeout'> {
     /** 默认为 `localhost` */
     host?: string;
@@ -27,7 +28,7 @@ export interface ThriftClient extends Connection {
     get<TClient>(name: string, service: ServiceModule<TClient>): Client<TClient>;
     /**
      * 获取一个服务
-     * @throws 没有找到该服务
+     * @throws {Error} 没有找到该服务
      */
     get<TClient>(name: string): Client<TClient>;
     /** 查看服务是否存在 */
