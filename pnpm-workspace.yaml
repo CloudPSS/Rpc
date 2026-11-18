@@ -1,0 +1,2 @@
+configDependencies:
+  '@cloudpss/pnpm-plugin-config': '~4.1.7'

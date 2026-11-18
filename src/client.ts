@@ -101,7 +101,7 @@ export function createClient(options: ClientOptions): ThriftClient {
         },
         has: {
             value: function (this: ThriftClient, name: string): boolean {
-                return clients.get(name) != null;
+                return clients.has(name);
             },
         },
         end: {
