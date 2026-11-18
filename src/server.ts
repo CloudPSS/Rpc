@@ -26,6 +26,8 @@ declare module 'thrift' {
 export interface ServerOptions extends ThriftOptions {
     /** 启用 TLS */
     tls?: TlsOptions;
+    /** 接收数据的大小上限，单位为字节，默认为 128 MiB */
+    maxLength?: number;
 }
 
 /** 表示 Thrift RPC 服务端 */
@@ -117,6 +119,7 @@ export function createServer(options?: ServerOptions): ThriftServer | ThriftTlsS
     const { ...opt } = options ?? {};
     opt.transport ??= DEFAULT_TRANSPORT;
     opt.protocol ??= DEFAULT_PROTOCOL;
+    opt.maxLength ??= 128 * 1024 * 1024;
 
     const multiplex = new MultiplexedProcessor();
     const server = createMultiplexServer(multiplex, opt) as InternalServer;

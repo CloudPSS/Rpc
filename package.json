@@ -20,6 +20,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
+    "cloudpss-rpc": "./bin/cloudpss-rpc.js",
     "thrift": "./bin/thrift.js"
   },
   "scripts": {
@@ -27,7 +28,7 @@
     "build": "pnpm clean && tsc",
     "clean": "rimraf dist",
     "prepublishOnly": "pnpm build",
-    "test:build": "mkdirp ./test/thrift && node ./bin/thrift.js -r --gen js:ts,es6,node --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && pnpm format",
+    "test:build": "mkdirp ./test/thrift && node ./bin/cloudpss-rpc.js --gen markdown:suffix=md -o ./test/thrift ./test/room.thrift && pnpm format",
     "test:server": "NODE_DEBUG=cloudpss/rpc node ./test/server.ts",
     "test:client": "NODE_DEBUG=cloudpss/rpc node ./test/client.ts",
     "prepare": "husky || echo Failed to initialize husky",
@@ -50,11 +51,9 @@
   },
   "dependencies": {
     "@types/node": "^26.6.6",
-    "@types/node-int64": "^0.4.32",
     "@types/thrift": "^0.10.17"
   },
   "peerDependencies": {
-    "node-int64": "^0.4.0",
-    "thrift": "0.22.0"
+    "thrift": "0.25.0"
   }
 }

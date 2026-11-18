@@ -13,10 +13,11 @@ pnpm add @cloudpss/rpc
 ### 生成接口文件
 
 - 创建 thrift IDL 文件（如：`rpc/my-service.thrift`）
-- 运行 `thrift` 命令生成 JS/TS 接口
+- 运行 `cloudpss-rpc` 递归生成 Node.js 的 JS 和 TypeScript 声明，IDL 中的 `i64` 映射为 `bigint`。
   ```bash
-  pnpm thrift -r --gen js:ts,es6,node -out ./src/thrift
+  pnpm exec cloudpss-rpc -out ./src/thrift ./rpc/my-service.thrift
   ```
+- `cloudpss-rpc` 默认加上 `-r --gen js:ts,es6,node,bigint`，其余参数原样传给 `thrift`。
 
 ### 服务端
 
