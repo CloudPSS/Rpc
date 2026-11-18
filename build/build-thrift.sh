@@ -1,15 +1,9 @@
-#! /bin/bash
+#!/bin/bash
+set -euo pipefail
 
-apt-get update
-apt-get install -y cmake flex bison
+cd "$(dirname "$0")"
+mkdir thrift-src
+tar -xf thrift.tar.gz --strip-components=1 -C thrift-src
 
-dir="$(dirname "$(realpath "$0")")/temp"
-
-cd $dir
-rm -rf ./thrift ./thrift-*/
-tar -xf ./thrift.tar.gz
-cd ./thrift-*/compiler/cpp
-mkdir -p cmake-build && cd cmake-build
-cmake ..
-make
-cp bin/thrift $dir/thrift
+cmake -S thrift-src/compiler/cpp -B thrift-build
+cmake --build thrift-build --parallel 4

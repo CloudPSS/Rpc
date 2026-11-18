@@ -2,6 +2,8 @@ param(
   [string]$version
 )
 
+$ErrorActionPreference = 'Stop'
+
 $index = Invoke-WebRequest "https://dlcdn.apache.org/thrift"
 $versions = @(
   $index.Links 
@@ -21,20 +23,25 @@ if ($version) {
   Write-Output "Latest versions of the thrift is $lateset"
 }
 
-Invoke-WebRequest "https://dlcdn.apache.org/thrift/$lateset/thrift-$lateset.exe" -OutFile "$PSScriptRoot/../bin/thrift.exe"
-Write-Output "Downloaded thrift-$lateset.exe to bin/thrift.exe"
+$tempDir = (New-Item -Path "$PSScriptRoot/temp/$([guid]::NewGuid())" -ItemType Directory -Force).FullName
+try {
+  Invoke-WebRequest "https://dlcdn.apache.org/thrift/$lateset/thrift-$lateset.exe" -OutFile "$tempDir/thrift.exe"
+  Invoke-WebRequest "https://dlcdn.apache.org/thrift/$lateset/thrift-$lateset.tar.gz" -OutFile "$tempDir/thrift.tar.gz"
 
-Remove-Item "$PSScriptRoot/temp" -Force -Recurse | Out-Null
-New-Item "$PSScriptRoot/temp" -Type Directory | Out-Null
-Invoke-WebRequest "https://dlcdn.apache.org/thrift/$lateset/thrift-$lateset.tar.gz" -OutFile "$PSScriptRoot/temp/thrift.tar.gz"
-Write-Output "Downloaded thrift-$lateset.tar.gz to build/temp/thrift.tar.gz"
+  docker buildx build --platform linux/amd64 --build-context "thrift-source=$tempDir" `
+    --output "type=local,dest=$tempDir" $PSScriptRoot
+  if ($LASTEXITCODE -ne 0) {
+    throw "Docker failed to build the Linux Thrift compiler (exit code $LASTEXITCODE)."
+  }
 
-docker run --rm -v "$PSScriptRoot/:/app" --workdir "/app" docker.cloudpss.net/cloudpss/buildpack-lts ./build-thrift.sh
+  $packagePath = "$PSScriptRoot/../package.json"
+  $pkg = Get-Content -LiteralPath $packagePath -Raw | ConvertFrom-Json
+  $pkg.peerDependencies.thrift = "$lateset"
 
-Copy-Item "$PSScriptRoot/temp/thrift" "$PSScriptRoot/../bin/thrift" -Force
-Write-Output "Copy thrift to bin/thrift"
-Remove-Item "$PSScriptRoot/temp" -Force -Recurse
-
-$pkg = Get-Content "$PSScriptRoot/../package.json" | ConvertFrom-Json
-$pkg.peerDependencies.thrift = "$lateset"
-ConvertTo-Json $pkg | Out-File "$PSScriptRoot/../package.json"
+  Copy-Item -LiteralPath "$tempDir/thrift" -Destination "$PSScriptRoot/../bin/thrift" -Force
+  Copy-Item -LiteralPath "$tempDir/thrift.exe" -Destination "$PSScriptRoot/../bin/thrift.exe" -Force
+  ConvertTo-Json $pkg | Out-File -LiteralPath $packagePath
+  Write-Output "Updated bin/thrift and bin/thrift.exe to $lateset"
+} finally {
+  Remove-Item -LiteralPath $tempDir -Force -Recurse
+}
